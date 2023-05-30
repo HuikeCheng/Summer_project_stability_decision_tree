@@ -177,11 +177,12 @@ Run_simu <- function(n, pk) {
               SvsF1_stab2 = SvsF1_stab2,))
 }
 
-
+########### run
+out <- Run_simu(10, 50)
 ########### cleanup output
-CART_metrics <- list.rbind(Metrics_cart)
-Stab_metrics <- list.rbind(Metrics_stab)
-Stab2_metrics <- list.rbind(Metrics_stab2)
+CART_metrics <- list.rbind(out$Metrics_cart)
+Stab_metrics <- list.rbind(out$Metrics_stab)
+Stab2_metrics <- list.rbind(out$Metrics_stab2)
 
 summary(CART_metrics)
 summary(Stab_metrics)
@@ -208,5 +209,5 @@ ggplot(df_metrics, aes(x=F1, group=model)) +
   labs(x="F1-score")
 
 ######### SvsF1
-SvsF1_stab[[1]]
-SvsF1_stab2[[1]]
+out$SvsF1_stab[[1]]
+out$SvsF1_stab2[[1]]
