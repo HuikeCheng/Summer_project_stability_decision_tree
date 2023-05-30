@@ -7,7 +7,7 @@ library(ggplot2)
 source("stab2.R")
 
 ######### function
-Simulation_study <- function(seed, pk) {
+Simulation_study <- function(seed, pk, proportion) {
   # set seed
   set.seed(seed)
   # simulate dataset
@@ -15,7 +15,13 @@ Simulation_study <- function(seed, pk) {
   # vars
   myvars_T <- rownames(simul$beta)[which(simul$beta != 0)]
   myvars_F <- rownames(simul$beta)[which(simul$beta == 0)]
-  
+  # get the true vars
+  id <- which(colnames(simul$xdata) %in% myvars_T)
+  id <- sample(id, round(length(id)*proportion, 0))
+  # change these vars to exp(X)
+  for (i in 1:length(id)){
+    simul$xdata[,id[i]] <- exp(simul$xdata[,id[i]])
+  }
   ######## run CART
   mydata <- data.frame(ydata = simul$ydata[, 1], simul$xdata)
   mycart <- rpart(ydata ~ ., mydata, method="anova", )
@@ -30,7 +36,7 @@ Simulation_study <- function(seed, pk) {
   )
   myvars_stab <- names(SelectedVariables(stab))[which(SelectedVariables(stab)!=0)]
   myscore_stab <- SelectionProportions(stab)
-
+  
   ####### run stab2
   Lambda <- mycart$cptable[,1]
   stab2 <- sharp::VariableSelection(
@@ -79,11 +85,11 @@ Simulation_study <- function(seed, pk) {
   
   ##### results
   Result <- list(cart = list(Metrics = metrics_cart,
-                          Scores = myscore_cart),
-              stab = list(Metrics = metrics_stab,
-                          Scores = myscore_stab),
-              stab2 = list(Metrics = metrics_stab2,
-                           Scores = myscore_stab2))
+                             Scores = myscore_cart),
+                 stab = list(Metrics = metrics_stab,
+                             Scores = myscore_stab),
+                 stab2 = list(Metrics = metrics_stab2,
+                              Scores = myscore_stab2))
   
   ########### S vs F1 for stab
   F1 <- matrix(0, nrow=nrow(stab$S_2d), ncol=ncol(stab$S_2d))
@@ -107,7 +113,7 @@ Simulation_study <- function(seed, pk) {
   df <- data.frame(S = S, F1 = F1)
   df <- df[!is.nan(df$S),]
   
-  p1 <- ggplot(df, aes(x=F1, y=S)) + geom_point()
+  p1 <- ggplot(df, aes(x=F1, y=S)) + geom_point() + ggtitle("stab")
   
   ########### S vs F1 for stab2
   F1 <- matrix(0, nrow=nrow(stab2$S_2d), ncol=ncol(stab2$S_2d))
@@ -131,18 +137,18 @@ Simulation_study <- function(seed, pk) {
   df <- data.frame(S = S, F1 = F1)
   df <- df[!is.nan(df$S),]
   
-  p2 <- ggplot(df, aes(x=F1, y=S)) + geom_point()
+  p2 <- ggplot(df, aes(x=F1, y=S)) + geom_point() + ggtitle("stab2")
   
   ####### output
   return(list(Result = Result, stab_SvsF1 = p1, stab2_SvsF1 = p2))
 }
 
-# a <- Simulation_study(1,50)
-# a$stab2_SvsF1
-# a$stab_SvsF1
+a <- Simulation_study(seed = 1, pk = 50, proportion = 1)
+a$stab2_SvsF1
+a$stab_SvsF1
 
 ######### Repeat the simulation 10 times
-Run_simu <- function(n, pk) {
+Run_simu <- function(n, pk, proportion) {
   # set up output
   Metrics_cart <- vector("list", length=n)
   Metrics_stab <- vector("list", length=n)
@@ -156,7 +162,7 @@ Run_simu <- function(n, pk) {
   # run simulation
   for (i in 1:n){
     print(paste0("Simulation", i))
-    tmp <- Simulation_study(i,pk)
+    tmp <- Simulation_study(seed = i,pk = pk, proportion = proportion)
     Metrics_cart[[i]] <- tmp$Result$cart$Metrics
     Metrics_stab[[i]] <- tmp$Result$stab$Metrics
     Metrics_stab2[[i]] <- tmp$Result$stab2$Metrics
@@ -178,7 +184,7 @@ Run_simu <- function(n, pk) {
 }
 
 ########### run
-out <- Run_simu(10, 50)
+out <- Run_simu(n = 10, pk = 50, proportion = 1)
 ########### cleanup output
 CART_metrics <- list.rbind(out$Metrics_cart)
 Stab_metrics <- list.rbind(out$Metrics_stab)
