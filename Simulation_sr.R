@@ -20,7 +20,7 @@ Simulation_study <- function(seed, pk, proportion) {
   id <- sample(id, round(length(id)*proportion, 0))
   # change these vars to exp(X)
   for (i in 1:length(id)){
-    simul$xdata[,id[i]] <- exp(simul$xdata[,id[i]])
+    simul$xdata[,id[i]] <- (simul$xdata[,id[i]])^2
   }
   ######## run CART
   mydata <- data.frame(ydata = simul$ydata[, 1], simul$xdata)
@@ -202,20 +202,20 @@ ggplot(df_metrics, aes(x=Sensitivity, group=model)) +
   geom_boxplot(aes(fill=model)) +
   theme(legend.title = element_blank(), 
         axis.text.y = element_blank()) +
-  ggtitle("log-50-10-0.5")
+  ggtitle("sr-50-10-0.5")
 
 ggplot(df_metrics, aes(x=Precision, group=model)) +
   geom_boxplot(aes(fill=model)) +
   theme(legend.title = element_blank(),
         axis.text.y = element_blank()) +
-  ggtitle("log-50-10-0.5")
+  ggtitle("sr-50-10-0.5")
 
 ggplot(df_metrics, aes(x=F1, group=model)) +
   geom_boxplot(aes(fill=model)) +
   theme(legend.title = element_blank(),
         axis.text.y = element_blank()) +
   labs(x="F1-score") +
-  ggtitle("log-50-10-0.5")
+  ggtitle("sr-50-10-0.5")
 
 ######### SvsF1
 out$SvsF1_stab[[1]]
