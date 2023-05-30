@@ -18,9 +18,14 @@ Simulation_study <- function(seed, pk, proportion) {
   # get the true vars
   id <- which(colnames(simul$xdata) %in% myvars_T)
   id <- sample(id, round(length(id)*proportion, 0))
-  # change these vars to exp(X)
+  # change these vars to abs(X)
   for (i in 1:length(id)){
-    simul$xdata[,id[i]] <- (simul$xdata[,id[i]])^2
+    simul$xdata[,id[i]] <- abs(simul$xdata[,id[i]])
+  }
+  simul$ydata <- simul$xdata%*%simul$beta
+  # change these vars to log(X)
+  for (i in 1:length(id)){
+    simul$xdata[,id[i]] <- log(simul$xdata[,id[i]])
   }
   ######## run CART
   mydata <- data.frame(ydata = simul$ydata[, 1], simul$xdata)
@@ -143,12 +148,12 @@ Simulation_study <- function(seed, pk, proportion) {
   return(list(Result = Result, stab_SvsF1 = p1, stab2_SvsF1 = p2))
 }
 
-a <- Simulation_study(seed = 1, pk = 50, proportion = 1)
+a <- Simulation_study(seed = 1, pk = 50, proportion = 0.5)
 a$stab2_SvsF1
 a$stab_SvsF1
 
 ######### Repeat the simulation 10 times
-Run_simu <- function(n, pk, proportion) {
+Run_simu <- function(pk, n, proportion) {
   # set up output
   Metrics_cart <- vector("list", length=n)
   Metrics_stab <- vector("list", length=n)
@@ -184,7 +189,7 @@ Run_simu <- function(n, pk, proportion) {
 }
 
 ########### run
-out <- Run_simu(n = 10, pk = 50, proportion = 1)
+out <- Run_simu(pk = 50, n = 10, proportion = 0.5)
 ########### cleanup output
 CART_metrics <- list.rbind(out$Metrics_cart)
 Stab_metrics <- list.rbind(out$Metrics_stab)
@@ -202,20 +207,20 @@ ggplot(df_metrics, aes(x=Sensitivity, group=model)) +
   geom_boxplot(aes(fill=model)) +
   theme(legend.title = element_blank(), 
         axis.text.y = element_blank()) +
-  ggtitle("sr-50-10-1")
+  ggtitle("exp-50-10-0.5")
 
 ggplot(df_metrics, aes(x=Precision, group=model)) +
   geom_boxplot(aes(fill=model)) +
   theme(legend.title = element_blank(),
         axis.text.y = element_blank()) +
-  ggtitle("sr-50-10-1")
+  ggtitle("exp-50-10-0.5")
 
 ggplot(df_metrics, aes(x=F1, group=model)) +
   geom_boxplot(aes(fill=model)) +
   theme(legend.title = element_blank(),
         axis.text.y = element_blank()) +
   labs(x="F1-score") +
-  ggtitle("sr-50-10-1")
+  ggtitle("exp-50-10-0.5")
 
 ######### SvsF1
 out$SvsF1_stab[[1]]
