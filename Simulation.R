@@ -58,16 +58,46 @@ FN_stab2 <- sum(!(myvars_T %in% myvars_stab2))
 sensitivity_cart <- TP_cart/length(myvars_T)
 precision_cart <- TP_cart/length(myvars_cart)
 f1_cart <- 2*sensitivity_cart*precision_cart/(sensitivity_cart+precision_cart)
+metrics_cart <- c(sensitivity_cart, precision_cart, f1_cart)
+names(metrics_cart) <- c("Sensitivity", "Precision", "F1")
 
 sensitivity_stab <- TP_stab/length(myvars_T)
 precision_stab <- TP_stab/length(myvars_stab)
 f1_stab <- 2*sensitivity_stab*precision_stab/(sensitivity_stab+precision_stab)
+metrics_stab <- c(sensitivity_stab, precision_stab, f1_stab)
+names(metrics_stab) <- c("Sensitivity", "Precision", "F1")
 
 sensitivity_stab2 <- TP_stab2/length(myvars_T)
 precision_stab2 <- TP_stab2/length(myvars_stab2)
 f1_stab2 <- 2*sensitivity_stab2*precision_stab2/(sensitivity_stab2+precision_stab2)
+metrics_stab2 <- c(sensitivity_stab2, precision_stab2, f1_stab2)
+names(metrics_stab2) <- c("Sensitivity", "Precision", "F1")
 
-########### S vs F1
+########### S vs F1 for stab
+F1 <- matrix(0, nrow=nrow(stab$S_2d), ncol=ncol(stab$S_2d))
+for (i in 1:nrow(stab$S_2d)) {
+  for (j in 1:ncol(stab$S_2d)) {
+    myvars_stab <- Stable(stab, argmax_id = c(i,j))
+    myvars_stab <- names(myvars_stab)[myvars_stab == 1]
+    TP_stab <- sum(myvars_T %in% myvars_stab)
+    FP_stab <- sum(myvars_F %in% myvars_stab)
+    TN_stab <- sum(!(myvars_F %in% myvars_stab))
+    FN_stab <- sum(!(myvars_T %in% myvars_stab))
+    sensitivity_stab <- TP_stab/length(myvars_T)
+    precision_stab <- TP_stab/length(myvars_stab)
+    f1_stab <- 2*sensitivity_stab*precision_stab/(sensitivity_stab+precision_stab)
+    F1[i,j] <- f1_stab
+  }
+}
+
+F1 <- c(F1)
+S <- c(stab$S_2d)
+df <- data.frame(S = S, F1 = F1)
+df <- df[!is.nan(df$S),]
+
+p1 <- ggplot(df, aes(x=F1, y=S)) + geom_point()
+
+########### S vs F1 for stab2
 F1 <- matrix(0, nrow=nrow(stab2$S_2d), ncol=ncol(stab2$S_2d))
 for (i in 1:nrow(stab2$S_2d)) {
   for (j in 1:ncol(stab2$S_2d)) {
