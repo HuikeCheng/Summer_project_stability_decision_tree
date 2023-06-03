@@ -1,0 +1,45 @@
+getCM <- function(vars, Tvars, Fvars) {
+  cm <- matrix(0, nrow = 2, ncol = 2)
+  cm[1,1] <- sum(Tvars %in% vars)
+  cm[1,2] <- sum(!(Tvars %in% vars))
+  cm[2,1] <- sum(Fvars %in% vars)
+  cm[2,2] <- sum(!(Fvars %in% vars))
+  return(cm)
+}
+
+# Tvars <- c("x1", "x2", "x3")
+# Fvars <- c("x4", "x5", "x6")
+# vars <- c("x1", "x2")
+# getCM(vars, Tvars, Fvars)
+
+getMetrics <- function(cm) {
+  recall <- cm[1,1]/(cm[1,1] + cm[1,2])
+  precision <- cm[1,1]/(cm[1,1] + cm[2,1])
+  f1 <- 2*recall*precision/(recall + precision)
+  specificity <- cm[2,2]/(cm[2,2] + cm[2,1])
+  metrics <- c(recall, precision, f1, specificity)
+  names(metrics) <- c("Recall", "Precision", "F1", "Specificity")
+  return(metrics)
+}
+
+# cm <- getCM("cart")
+# getMetrics(cm)
+
+getBeta <- function(vars, Tvars, beta) {
+  TP <- Tvars[Tvars %in% vars]
+  FN <- Tvars[!(Tvars %in% vars)]
+  meanTP <- mean(abs(beta[rownames(beta) %in% TP]))
+  meanFN <- mean(abs(beta[rownames(beta) %in% FN]))
+  minTP <- min(abs(beta[rownames(beta) %in% TP]))
+  minFN <- min(abs(beta[rownames(beta) %in% FN]))
+  maxTP <- max(abs(beta[rownames(beta) %in% TP]))
+  maxFN <- max(abs(beta[rownames(beta) %in% FN]))
+  out <- c(minTP, meanTP, maxTP, minFN, meanFN, maxFN)
+  names(out) <- c("minTP", "meanTP", "maxTP", "minFN", "meanFN", "maxFN")
+  if (any(is.nan(out))) {
+    print("No FN, set NaN and Inf to 0")
+    out[is.nan(out)] <- 0
+    out[is.infinite(out)] <- 0
+  }
+  return(out)
+}
