@@ -33,7 +33,7 @@
 #' head(mycart$selected)
 #'
 #' @export
-CART2 <- function(xdata, ydata, Lambda = Lambda, family, maxsurrogate, ...) {
+CART1 <- function(xdata, ydata, Lambda = NULL, family, maxsurrogate, ...) {
   # Checking rpart package is installed
   #CheckPackageInstalled("rpart")
   
@@ -97,12 +97,12 @@ CART2 <- function(xdata, ydata, Lambda = Lambda, family, maxsurrogate, ...) {
   ))
   
   # Pruning the decision tree
-  selected <- matrix(0, nrow = length(Lambda), ncol = ncol(xdata))
+  selected <- matrix(0, nrow = nrow(Lambda), ncol = ncol(xdata))
   colnames(selected) <- colnames(xdata)
-  for (i in 1:length(Lambda)) {
-    # n_split <- Lambda[i, 1]
-    # id <- max(which(mytree$cptable[, 2] <= n_split))
-    mypruned <- rpart::prune(mytree, cp = Lambda[i])
+  for (i in 1:nrow(Lambda)) {
+    n_split <- Lambda[i, 1]
+    id <- max(which(mytree$cptable[, 2] <= n_split))
+    mypruned <- rpart::prune(mytree, cp = mytree$cptable[id, 1])
     selected[i, unique(rownames(mypruned$splits))] <- 1
   }
   
