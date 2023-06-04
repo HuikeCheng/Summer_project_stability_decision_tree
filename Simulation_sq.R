@@ -21,9 +21,14 @@ Simulation_study <- function(seed, n, pk, nu_xy, proportion) {
   # get the true vars
   id <- which(colnames(simul$xdata) %in% myvars_T)
   id <- sample(id, round(length(id)*proportion, 0))
-  # change these vars to exp(X)
+  # change these vars to abs(X)
   for (i in 1:length(id)){
-    simul$xdata[,id[i]] <- exp(simul$xdata[,id[i]])
+    simul$xdata[,id[i]] <- abs(simul$xdata[,id[i]])
+  }
+  simul$ydata <- simul$xdata%*%simul$beta
+  # change these vars to log(X)
+  for (i in 1:length(id)){
+    simul$xdata[,id[i]] <- sqrt(simul$xdata[,id[i]])
   }
   # set up output
   metrics <- vector("list", length = 4)
@@ -124,7 +129,7 @@ Betas %>% group_by(model) %>% summarise_all(mean)
 
 ########### plots - Metrics
 Metrics$model <- factor(Metrics$model, levels = unique(Metrics$model))
-title <- "Log: numrep = 1000, n = 1000, pk = 500, nu_xy = 0.1, proportion = 0.5"
+title <- "Sq: numrep = 1000, n = 1000, pk = 500, nu_xy = 0.1, proportion = 0.5"
 
 ggplot(Metrics, aes(x=Recall, y=forcats::fct_rev(model))) +
   geom_boxplot() +
