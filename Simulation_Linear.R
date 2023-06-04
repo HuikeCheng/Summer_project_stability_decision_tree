@@ -78,22 +78,23 @@ Simulation_study <- function(seed, n, pk, nu_xy) {
 ########### Parallelise
 library(foreach)
 library(doParallel)
+library(tcltk)
 
 no_cores <- detectCores() - 1
 cl <- makeCluster(no_cores)
 registerDoParallel(cl)
 
-clusterEvalQ(cl, library(fake))
-clusterEvalQ(cl, library(rpart))
-clusterEvalQ(cl, library(sharp))
-clusterExport(cl, c("CART1", "CART2", "getBeta", "getCM", "getMetrics", "Simulation_study"))
-
-out <- foreach(seed = 1:1000, 
+out <- foreach(i = 1:6, 
         .combine = list,
         .multicombine = TRUE,
-        .verbose = TRUE)  %dopar%  
-  Simulation_study(seed = seed, n = 1000, pk = 500, nu_xy = 0.1)
-
+        .verbose = TRUE,
+        .packages = c("fake", "rpart", "sharp", "tcltk"))  %dopar% {
+          if(!exists("pb")) pb <- tkProgressBar("Parallel task", min=0, max=6, initial = 0)
+          setTkProgressBar(pb, i)
+          Sys.sleep(0.05)
+          Simulation_study(seed = i, n = 1000, pk = 500, nu_xy = 0.1)
+        } 
+  
 stopImplicitCluster()
 
 ########### cleanup output
