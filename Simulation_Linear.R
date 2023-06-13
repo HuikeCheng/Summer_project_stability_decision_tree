@@ -1,3 +1,19 @@
+######## pass in arguments
+args=commandArgs(trailingOnly=TRUE)
+numrep <- as.numeric(args[1])
+n <- as.numeric(args[2])
+pk <- as.numeric(args[3])
+nu_xy <- as.numeric(args[4])
+ev_xy <- as.numeric(args[5])
+nchunks <- as.numeric(args[6])
+
+######## create folder
+folder <- paste("Linear", n, pk, nu_xy, ev_xy, sep = "_")
+if (file.exists(folder) == FALSE) {
+  dir.create(folder)
+}
+print(folder)
+
 ######### load packages
 library(rpart)
 library(sharp)
@@ -30,7 +46,7 @@ Simulation_study <- function(seed, n, pk, nu_xy, ev_xy) {
   mydata <- data.frame(ydata = simul$ydata[, 1], simul$xdata)
   mycart <- rpart(ydata ~ ., mydata, method="anova")
   
-  myvars <- names(mycart$variable.importance)
+  myvars <- unique(rownames(mycart$splits))
   metrics$CART <- getMetrics(getCM(vars = myvars, Tvars = myvars_T, Fvars = myvars_F))
   
   ######### run stab1
@@ -72,13 +88,7 @@ Simulation_study <- function(seed, n, pk, nu_xy, ev_xy) {
 # b <- Simulation_study(seed = 2, n = 100, pk = 50, nu_xy = 0.2, ev_xy = 0.5)
 
 ########### Parallelise
-numrep <- 10
-n <- 1000
-pk <- 500
-nu_xy <- 0.2
-ev_xy <- 0.5
-
-no_cores <- detectCores() - 1
+no_cores <- nchunks
 cl <- makeCluster(no_cores)
 
 clusterEvalQ(cl, library(rpart))
@@ -92,6 +102,7 @@ out <- pblapply(1:numrep,
                 cl = cl)
 
 stopCluster(cl)
+
 ########### cleanup output
 Metrics <- vector("list", length = numrep)
 for (i in seq_along(out)) {
@@ -102,11 +113,6 @@ Metrics <- list.rbind(Metrics)
 Metrics$model <- factor(Metrics$model, levels = unique(Metrics$model))
 
 ########### save output
-# create folder
-folder <- paste("Linear", n, pk, nu_xy, ev_xy, sep = "_")
-file.exists(folder)
-dir.create(folder)
-# save
 saveRDS(Metrics, file = paste(folder,"Metrics.rds", sep = "/"))
 
 ########### plots - Metrics
