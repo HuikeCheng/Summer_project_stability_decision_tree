@@ -15,11 +15,13 @@ SimulateAssoc <- function(x, association, sd = 0.1, threshold = NULL) {
     x <- 2*sin(x)
   } else if (association == "Heteroscedastic") {
     x <- x*runif(n = length(x), min=-3, max=3)*rnorm(n = length(x), sd = sd)
-  }
-  
-  # Simple threshold effect
-  if (!is.null(threshold)) {
-    x[x<=threshold] <- min(x[x>=threshold])
+  } else if (association == "Threshold") {
+    # Simple threshold effect
+    if (!is.null(threshold)) {
+      x[x<=threshold] <- min(x[x>=threshold])
+    }
+  } else {
+    stop("not recognised")
   }
   return(x)
 }
