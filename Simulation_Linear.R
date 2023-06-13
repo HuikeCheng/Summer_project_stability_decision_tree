@@ -4,17 +4,20 @@ library(sharp)
 library(fake)
 library(rlist)
 library(tidyverse)
+library(parallel)
+library(pbapply)
 library(ggplot2)
 source("stab1.R")
 source("stab2.R")
 source("Functions.R")
 
 ####################### Set up simulation study ################################
-Simulation_study <- function(seed, n, pk, nu_xy) {
+Simulation_study <- function(seed, n, pk, nu_xy, ev_xy) {
   # set seed
   set.seed(seed)
   # generate data
-  simul <- SimulateRegression(n = n, pk = pk, nu_xy = nu_xy)
+  simul <- SimulateRegression(n = n, pk = pk, nu_xy = nu_xy, ev_xy = ev_xy,
+                              beta_abs = 1, beta_sign = 1)
   # vars
   myvars_T <- rownames(simul$beta)[which(simul$beta != 0)]
   myvars_F <- rownames(simul$beta)[which(simul$beta == 0)]
@@ -22,8 +25,6 @@ Simulation_study <- function(seed, n, pk, nu_xy) {
   # set up output
   metrics <- vector("list", length = 4)
   names(metrics) <- c("CART", "stab1", "stab2", "LASSO")
-  meanBeta <- vector("list", length = 4)
-  names(meanBeta) <- c("CART", "stab1", "stab2", "LASSO")
   
   ######## run CART
   mydata <- data.frame(ydata = simul$ydata[, 1], simul$xdata)
@@ -31,7 +32,6 @@ Simulation_study <- function(seed, n, pk, nu_xy) {
   
   myvars <- names(mycart$variable.importance)
   metrics$CART <- getMetrics(getCM(vars = myvars, Tvars = myvars_T, Fvars = myvars_F))
-  meanBeta$CART <- getBeta(vars = myvars, Tvars = myvars_T, beta = simul$beta)
   
   ######### run stab1
   stab1 <- sharp::VariableSelection(
@@ -42,7 +42,6 @@ Simulation_study <- function(seed, n, pk, nu_xy) {
   
   myvars <- names(SelectedVariables(stab1))[which(SelectedVariables(stab1)!=0)]
   metrics$stab1 <- getMetrics(getCM(vars = myvars, Tvars = myvars_T, Fvars = myvars_F))
-  meanBeta$stab1 <- getBeta(vars = myvars, Tvars = myvars_T, beta = simul$beta)
   
   ####### run stab2
   Lambda <- mycart$cptable[,1]
@@ -55,7 +54,6 @@ Simulation_study <- function(seed, n, pk, nu_xy) {
   
   myvars <- names(SelectedVariables(stab2))[which(SelectedVariables(stab2)!=0)]
   metrics$stab2 <- getMetrics(getCM(vars = myvars, Tvars = myvars_T, Fvars = myvars_F))
-  meanBeta$stab2 <- getBeta(vars = myvars, Tvars = myvars_T, beta = simul$beta)
   
   ####### Stability-lasso
   lasso <- sharp::VariableSelection(
@@ -65,103 +63,84 @@ Simulation_study <- function(seed, n, pk, nu_xy) {
   
   myvars <- names(SelectedVariables(lasso))[which(SelectedVariables(lasso)!=0)]
   metrics$LASSO <- getMetrics(getCM(vars = myvars, Tvars = myvars_T, Fvars = myvars_F))
-  meanBeta$LASSO <- getBeta(vars = myvars, Tvars = myvars_T, beta = simul$beta)
   
   ####### output
-  return(list(metrics = metrics,
-              meanBeta = meanBeta))
+  return(metrics)
 }
 
-# a <- Simulation_study(seed = 1, n = 100, pk = 50, nu_xy = 0.2)
-# b <- Simulation_study(seed = 2, n = 100, pk = 50, nu_xy = 0.2)
+# a <- Simulation_study(seed = 1, n = 100, pk = 50, nu_xy = 0.2, ev_xy = 0.5)
+# b <- Simulation_study(seed = 2, n = 100, pk = 50, nu_xy = 0.2, ev_xy = 0.5)
 
 ########### Parallelise
-library(foreach)
-library(doParallel)
-library(tcltk)
+numrep <- 10
+n <- 1000
+pk <- 500
+nu_xy <- 0.2
+ev_xy <- 0.5
 
 no_cores <- detectCores() - 1
 cl <- makeCluster(no_cores)
-registerDoParallel(cl)
 
-out <- foreach(i = 1:6, 
-        .combine = list,
-        .multicombine = TRUE,
-        .verbose = TRUE,
-        .packages = c("fake", "rpart", "sharp", "tcltk"))  %dopar% {
-          if(!exists("pb")) pb <- tkProgressBar("Parallel task", min=0, max=6, initial = 0)
-          setTkProgressBar(pb, i)
-          Sys.sleep(0.05)
-          Simulation_study(seed = i, n = 1000, pk = 500, nu_xy = 0.1)
-        } 
-  
-stopImplicitCluster()
+clusterEvalQ(cl, library(rpart))
+clusterEvalQ(cl, library(sharp))
+clusterEvalQ(cl, library(fake))
+clusterExport(cl, c("numrep", "n", "pk", "nu_xy", "ev_xy",
+                    "CART1", "CART2", "getBeta", "getCM", "getMetrics", "Simulation_study"))
 
+out <- pblapply(1:numrep,
+                function(i) {Simulation_study(seed = i, n = n, pk = pk, nu_xy = nu_xy, ev_xy = ev_xy)},
+                cl = cl)
+
+stopCluster(cl)
 ########### cleanup output
-numrep <- 1000
 Metrics <- vector("list", length = numrep)
 for (i in seq_along(out)) {
-  Metrics[[i]] <- as.data.frame(list.rbind(out[[i]]$metrics))
+  Metrics[[i]] <- as.data.frame(list.rbind(out[[i]]))
   Metrics[[i]]$model <- rownames(Metrics[[i]])
 }
 Metrics <- list.rbind(Metrics)
+Metrics$model <- factor(Metrics$model, levels = unique(Metrics$model))
 
-Betas <- vector("list", length = numrep)
-for (i in seq_along(out)) {
-  Betas[[i]] <- as.data.frame(list.rbind(out[[i]]$meanBeta))
-  Betas[[i]]$model <- rownames(Betas[[i]])
-}
-Betas <- list.rbind(Betas)
-
-########### summary measures
-Metrics %>% group_by(model) %>% summarise_all(median)
-
-Betas %>% group_by(model) %>% summarise_all(mean)
+########### save output
+# create folder
+folder <- paste("Linear", n, pk, nu_xy, ev_xy, sep = "_")
+file.exists(folder)
+dir.create(folder)
+# save
+saveRDS(Metrics, file = paste(folder,"Metrics.rds", sep = "/"))
 
 ########### plots - Metrics
-Metrics$model <- factor(Metrics$model, levels = unique(Metrics$model))
-title <- "Linear: numrep = 1000, n = 1000, pk = 500, nu_xy = 0.1"
+title <- paste("Linear: ", "n = ", n, ", pk = ", pk, ", nu_xy = ", nu_xy, ", ev_xy = ", ev_xy, sep = "")
 
+png(file = paste(folder,"Recall.png", sep = "/"))
 ggplot(Metrics, aes(x=Recall, y=forcats::fct_rev(model))) +
   geom_boxplot() +
   theme(legend.title = element_blank(),
         axis.title.y = element_blank()) +
   ggtitle(title)
+dev.off()
 
+png(file = paste(folder,"Precision.png", sep = "/"))
 ggplot(Metrics, aes(x=Precision, y=forcats::fct_rev(model))) +
   geom_boxplot() +
   theme(legend.title = element_blank(),
         axis.title.y = element_blank()) +
   ggtitle(title)
+dev.off()
 
+png(file = paste(folder,"F1.png", sep = "/"))
 ggplot(Metrics, aes(x=F1, y=forcats::fct_rev(model))) +
   geom_boxplot() +
   theme(legend.title = element_blank(),
         axis.title.y = element_blank()) +
   labs(x = "F1-score") +
   ggtitle(title)
+dev.off()
 
+png(file = paste(folder,"Specificity.png", sep = "/"))
 ggplot(Metrics, aes(x=Specificity, y=forcats::fct_rev(model))) +
   geom_boxplot() +
   theme(legend.title = element_blank(),
         axis.title.y = element_blank()) +
   ggtitle(title)
-
-########### plots - Betas
-Betas$model <- factor(Betas$model, levels = unique(Betas$model))
-
-ggplot(Betas, aes(y = meanTP, x= forcats::fct_rev(model))) +
-  geom_point() +
-  geom_errorbar(aes(ymin=min(minTP), ymax=max(maxTP)), width=.2) +
-  ylim(0,1) +
-  coord_flip() +
-  labs(y = "Beta value of TPs", x = "") +
-  ggtitle(title)
-
-ggplot(Betas, aes(y = meanFN, x= forcats::fct_rev(model))) +
-  geom_point() +
-  geom_errorbar(aes(ymin=min(minFN), ymax=max(maxFN)), width=.2) +
-  ylim(0,1) +
-  coord_flip() +
-  labs(y = "Beta value of FNs", x = "") +
-  ggtitle(title)
+dev.off()

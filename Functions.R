@@ -17,6 +17,7 @@ getMetrics <- function(cm) {
   precision <- cm[1,1]/(cm[1,1] + cm[2,1])
   f1 <- 2*recall*precision/(recall + precision)
   specificity <- cm[2,2]/(cm[2,2] + cm[2,1])
+  if (is.nan(f1)) {f1 <- 0}
   metrics <- c(recall, precision, f1, specificity)
   names(metrics) <- c("Recall", "Precision", "F1", "Specificity")
   return(metrics)
