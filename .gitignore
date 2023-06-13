@@ -3,3 +3,6 @@
 .RData
 .Ruserdata
 job_scripts/
+.sh
+*.e*
+*.o*
