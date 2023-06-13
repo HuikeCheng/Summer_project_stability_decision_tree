@@ -1,6 +1,6 @@
 ######## pass in arguments
 args=commandArgs(trailingOnly=TRUE)
-args <- c("100", "Sigmoidal", "1000", "500", "0.1", "0.5", "1", "50")
+#args <- c("100", "Sigmoidal", "1000", "500", "0.1", "0.5", "1", "50")
 numrep <- as.numeric(args[1])
 association <- as.character(args[2])
 n <- as.numeric(args[3])
