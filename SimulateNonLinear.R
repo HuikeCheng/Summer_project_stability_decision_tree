@@ -295,15 +295,16 @@ SimulateNonLinear <- function(n = 100, pk = 10, xdata = NULL,
   )
   
   # Changing the relationship between true predictor and y
-  if (association %in% c("Log", "Sqrt")) {
-    for (i in seq_along(id)) {
-      xdata[,id[i]] <- abs(xdata[,id[i]])
-    }
-  }
   xTransformed <- xdata
   if (q == 1) {
     id <- which(theta == 1)
     id <- sample(id, round(length(id)*proportion, 0))
+    if (association %in% c("Log", "Sqrt")) {
+      for (i in seq_along(id)) {
+        xdata[,id[i]] <- abs(xdata[,id[i]])
+        xTransformed[,id[i]] <- abs(xTransformed[,id[i]])
+      }
+    }
     for (i in seq_along(id)) {
       xTransformed[,id[i]] <- SimulateAssoc(xTransformed[,id[i]], association = association, threshold = threshold)
     }

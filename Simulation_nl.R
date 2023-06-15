@@ -95,7 +95,7 @@ Simulation_study <- function(seed, association, n, pk, nu_xy, ev_xy, proportion,
   return(metrics)
 }
 
-# a <- Simulation_study(seed = 1, association = "Threshold", n = 100, pk = 50, nu_xy = 0.2, ev_xy = 0.5, proportion = 1, threshold = 0)
+# a <- Simulation_study(seed = 1, association = "Sqrt", n = 100, pk = 50, nu_xy = 0.2, ev_xy = 0.5, proportion = 1, threshold = 0)
 
 ########### Parallelise
 no_cores <- nchunks
