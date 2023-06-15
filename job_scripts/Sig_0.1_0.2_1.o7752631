@@ -1,4 +1,4 @@
-[1] "Heteroscedastic_1000_500_0.1_0.5_0.5"
+[1] "Sigmoidal_1000_500_0.1_0.2_1"
 [[1]]
 [1] "rpart"     "stats"     "graphics"  "grDevices" "utils"     "datasets" 
 [7] "methods"   "base"     
