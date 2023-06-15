@@ -16,7 +16,7 @@ if (is.na(args[9])) {
 }
 
 ######## create folder
-folder <- paste(association, n, pk, nu_xy, ev_xy, proportion, sep = "_")
+folder <- paste(paste0("Outputs/", association), n, pk, nu_xy, ev_xy, proportion, sep = "_")
 if (file.exists(folder) == FALSE) {
   dir.create(folder)
 }

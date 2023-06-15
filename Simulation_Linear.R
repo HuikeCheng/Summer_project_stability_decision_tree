@@ -9,7 +9,7 @@ ev_xy <- as.numeric(args[5])
 nchunks <- as.numeric(args[6])
 
 ######## create folder
-folder <- paste("Linear", n, pk, nu_xy, ev_xy, sep = "_")
+folder <- paste("Outputs/Linear", n, pk, nu_xy, ev_xy, sep = "_")
 if (file.exists(folder) == FALSE) {
   dir.create(folder)
 }
