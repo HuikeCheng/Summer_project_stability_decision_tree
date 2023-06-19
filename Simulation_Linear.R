@@ -1,6 +1,6 @@
 ######## pass in arguments
 args=commandArgs(trailingOnly=TRUE)
-#args <- c("100", "1000", "500", "0.1", "0.7")
+#args <- c("100", "1000", "500", "0.1", "0.5")
 numrep <- as.numeric(args[1])
 n <- as.numeric(args[2])
 pk <- as.numeric(args[3])
@@ -9,7 +9,7 @@ ev_xy <- as.numeric(args[5])
 nchunks <- as.numeric(args[6])
 
 ######## create folder
-folder <- paste("Linear", n, pk, nu_xy, ev_xy, sep = "_")
+folder <- paste("Outputs/Linear", n, pk, nu_xy, ev_xy, sep = "_")
 if (file.exists(folder) == FALSE) {
   dir.create(folder)
 }
@@ -33,8 +33,7 @@ Simulation_study <- function(seed, n, pk, nu_xy, ev_xy) {
   # set seed
   set.seed(seed)
   # generate data
-  simul <- SimulateRegression(n = n, pk = pk, nu_xy = nu_xy, ev_xy = ev_xy,
-                              beta_abs = 1, beta_sign = 1)
+  simul <- SimulateRegression(n = n, pk = pk, nu_xy = nu_xy)
   # vars
   myvars_T <- rownames(simul$beta)[which(simul$beta != 0)]
   myvars_F <- rownames(simul$beta)[which(simul$beta == 0)]
