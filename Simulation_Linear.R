@@ -1,5 +1,6 @@
 ######## pass in arguments
 args=commandArgs(trailingOnly=TRUE)
+#args <- c("100", "1000", "500", "0.1", "0.7")
 numrep <- as.numeric(args[1])
 n <- as.numeric(args[2])
 pk <- as.numeric(args[3])
