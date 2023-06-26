@@ -44,7 +44,7 @@ Simulation_study <- function(seed, association, n, pk, nu_xy, ev_xy, proportion,
   # generate data
   simul <- SimulateNonLinear(n = n, pk = pk, nu_xy = nu_xy, ev_xy = ev_xy,
                              beta_abs = 1, beta_sign = 1,
-                             association = association, proportion = proportion, threshold = threshold)
+                             association = association, proportion = proportion)
   # vars
   myvars_T <- rownames(simul$beta)[which(simul$beta != 0)]
   myvars_F <- rownames(simul$beta)[which(simul$beta == 0)]

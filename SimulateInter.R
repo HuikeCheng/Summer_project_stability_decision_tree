@@ -221,8 +221,7 @@ SimulateInter <- function(n = 100, pk = 10, xdata = NULL,
                               beta_abs = c(0.1, 1), beta_sign = c(-1, 1), continuous = TRUE,
                               ev_xy = 0.7,
                               type = "Pair",
-                              Number = 1,
-                              proportion = 1) {
+                              Number = 1) {
   # TODO in future versions: introduce more families ("multinomial" and "cox")
   # Checking that either n and pk or xdata are provided
   if (is.null(xdata)) {
@@ -276,7 +275,15 @@ SimulateInter <- function(n = 100, pk = 10, xdata = NULL,
   
   # Sampling true predictors
   if (is.null(theta)) {
-    theta <- SamplePredictors(pk = p, q = q, nu = nu_xy, orthogonal = FALSE)
+    #theta <- SamplePredictors(pk = p, q = q, nu = nu_xy, orthogonal = FALSE)
+    id <- sample(1:pk, 10)
+    theta <- rep(0, pk)
+    for (i in seq_along(theta)) {
+      if (i %in% id) {
+        theta[i] <- 1
+      }
+    }
+    theta <- as.matrix(theta)
   }
   
   # Sampling regression coefficients

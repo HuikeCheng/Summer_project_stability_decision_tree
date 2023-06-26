@@ -1,6 +1,6 @@
 ######## pass in arguments
 args=commandArgs(trailingOnly=TRUE)
-#args <- c("100", "Pair", "1000", "500", "0.1", "0.5", "1", "50")
+args <- c("10", "Layer", "1000", "500", "0.02", "0.05", "5", "5")
 numrep <- as.numeric(args[1])
 type <- as.character(args[2])
 n <- as.numeric(args[3])
@@ -89,7 +89,7 @@ Simulation_study <- function(seed, type, n, pk, nu_xy, ev_xy, Number) {
   return(metrics)
 }
 
-# a <- Simulation_study(seed = 1, type = "Layer", n = 100, pk = 20, nu_xy = 0.5, ev_xy = 0.1, Number = 2)
+#a <- Simulation_study(seed = 1, type = "Layer", n = 100, pk = 20, nu_xy = 0.5, ev_xy = 0.1, Number = 2)
 
 ########### Parallelise
 no_cores <- nchunks
@@ -98,6 +98,7 @@ cl <- makeCluster(no_cores)
 clusterEvalQ(cl, library(rpart))
 clusterEvalQ(cl, library(sharp))
 clusterEvalQ(cl, library(fake))
+clusterEvalQ(cl, library(rlist))
 clusterExport(cl, c("numrep", "type", "n", "pk", "nu_xy", "ev_xy", "Number",
                     "CART1", "CART2", "getBeta", "getCM", "getMetrics", "Simulation_study",
                     "SimulateInter", "HugeAdjacency", "SamplePredictors"))
@@ -123,8 +124,8 @@ Metrics$model <- factor(Metrics$model, levels = unique(Metrics$model))
 saveRDS(Metrics, file = paste(folder,"Metrics.rds", sep = "/"))
 
 ########### plots - Metrics
-title <- paste(association, ": ", "n = ", n, ", pk = ", pk, ", nu_xy = ", nu_xy, ", ev_xy = ", ev_xy, 
-               ", proportion = ", proportion, sep = "")
+title <- paste(type, ": ", "n = ", n, ", pk = ", pk, ", nu_xy = ", nu_xy, ", ev_xy = ", ev_xy, 
+               ", Number = ", Number, sep = "")
 
 png(file = paste(folder,"Recall.png", sep = "/"))
 ggplot(Metrics, aes(x=Recall, y=forcats::fct_rev(model))) +
@@ -158,3 +159,4 @@ ggplot(Metrics, aes(x=Specificity, y=forcats::fct_rev(model))) +
         axis.title.y = element_blank()) +
   ggtitle(title)
 dev.off()
+
