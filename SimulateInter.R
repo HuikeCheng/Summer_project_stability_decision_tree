@@ -276,7 +276,15 @@ SimulateInter <- function(n = 100, pk = 10, xdata = NULL,
   
   # Sampling true predictors
   if (is.null(theta)) {
-    theta <- SamplePredictors(pk = p, q = q, nu = nu_xy, orthogonal = FALSE)
+    #theta <- SamplePredictors(pk = p, q = q, nu = nu_xy, orthogonal = FALSE)
+    id <- sample(1:pk, 10)
+    theta <- rep(0, pk)
+    for (i in seq_along(theta)) {
+      if (i %in% id) {
+        theta[i] <- 1
+      }
+    }
+    theta <- as.matrix(theta)
   }
   
   # Sampling regression coefficients
