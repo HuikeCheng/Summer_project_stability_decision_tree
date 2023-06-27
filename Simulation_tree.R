@@ -1,22 +1,14 @@
 ######## pass in arguments
 args=commandArgs(trailingOnly=TRUE)
-#args <- c("100", "Sigmoidal", "1000", "500", "0.1", "0.5", "1", "50")
+#args <- c("100", "4", "1000", "500", "0.1")
 numrep <- as.numeric(args[1])
-association <- as.character(args[2])
+height <- as.numeric(args[2])
 n <- as.numeric(args[3])
 pk <- as.numeric(args[4])
-nu_xy <- as.numeric(args[5])
-ev_xy <- as.numeric(args[6])
-proportion <- as.numeric(args[7])
-nchunks <- as.numeric(args[8])
-if (is.na(args[9])) {
-  threshold <- NULL
-} else {
-  threshold <- as.numeric(args[9])
-}
+ev_xy <- as.numeric(args[5])
 
 ######## create folder
-folder <- paste(paste0("Outputs/", association), n, pk, nu_xy, ev_xy, proportion, sep = "_")
+folder <- paste(paste0("Outputs/Tree"), height, n, pk, ev_xy, sep = "_")
 if (file.exists(folder) == FALSE) {
   dir.create(folder)
 }
@@ -28,23 +20,21 @@ library(sharp)
 library(fake)
 library(rlist)
 library(tidyverse)
+library(data.tree)
 library(parallel)
 library(pbapply)
 library(ggplot2)
 source("stab1.R")
 source("stab2.R")
 source("Functions.R")
-source("SimulateNonLinear.R")
-source("SimulateX.R")
+source("SimulateTree.R")
 
 ####################### Set up simulation study ################################
-Simulation_study <- function(seed, association, n, pk, nu_xy, ev_xy, proportion, threshold = NULL) {
+Simulation_study <- function(seed, height, n, pk, ev_xy) {
   # set seed
   set.seed(seed)
   # generate data
-  simul <- SimulateNonLinear(n = n, pk = pk, nu_xy = nu_xy, ev_xy = ev_xy,
-                             beta_abs = 1, beta_sign = 1,
-                             association = association, proportion = proportion)
+  simul <- SimulateTree(height = height, n = n, pk = pk, ev_xy = ev_xy)
   # vars
   myvars_T <- rownames(simul$beta)[which(simul$beta != 0)]
   myvars_F <- rownames(simul$beta)[which(simul$beta == 0)]
@@ -95,7 +85,7 @@ Simulation_study <- function(seed, association, n, pk, nu_xy, ev_xy, proportion,
   return(metrics)
 }
 
-# a <- Simulation_study(seed = 1, association = "Sqrt", n = 100, pk = 50, nu_xy = 0.2, ev_xy = 0.5, proportion = 1, threshold = 0)
+#a <- Simulation_study(seed = 1, height = 4, n = 100, pk = 50, ev_xy = 0.1)
 
 ########### Parallelise
 no_cores <- nchunks
@@ -104,14 +94,13 @@ cl <- makeCluster(no_cores)
 clusterEvalQ(cl, library(rpart))
 clusterEvalQ(cl, library(sharp))
 clusterEvalQ(cl, library(fake))
-clusterExport(cl, c("numrep", "association", "n", "pk", "nu_xy", "ev_xy", "proportion", "threshold",
+clusterExport(cl, c("numrep", "height", "n", "pk", "ev_xy",
                     "CART1", "CART2", "getBeta", "getCM", "getMetrics", "Simulation_study",
-                    "SimulateNonLinear", "SimulateAssoc", "HugeAdjacency", "SamplePredictors"))
+                    "SimulateTree"))
 
 out <- pblapply(1:numrep,
-                function(i) {Simulation_study(seed = i, association = association, 
-                                              n = n, pk = pk, nu_xy = nu_xy, ev_xy = ev_xy,
-                                              proportion = proportion, threshold = threshold)},
+                function(i) {Simulation_study(seed = i, height = height, 
+                                              n = n, pk = pk, ev_xy = ev_xy)},
                 cl = cl)
 
 stopCluster(cl)
@@ -129,8 +118,8 @@ Metrics$model <- factor(Metrics$model, levels = unique(Metrics$model))
 saveRDS(Metrics, file = paste(folder,"Metrics.rds", sep = "/"))
 
 ########### plots - Metrics
-title <- paste(association, ": ", "n = ", n, ", pk = ", pk, ", nu_xy = ", nu_xy, ", ev_xy = ", ev_xy, 
-               ", proportion = ", proportion, sep = "")
+title <- paste("Tree: ", "height = ", height, ", n = ", n, ", pk = ", pk, ", ev_xy = ", ev_xy, 
+               sep = "")
 
 png(file = paste(folder,"Recall.png", sep = "/"))
 ggplot(Metrics, aes(x=Recall, y=forcats::fct_rev(model))) +

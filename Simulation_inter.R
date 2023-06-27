@@ -1,6 +1,6 @@
 ######## pass in arguments
 args=commandArgs(trailingOnly=TRUE)
-#args <- c("100", "Pair", "1000", "500", "0.02", "0.1", "1", "50")
+args <- c("10", "Layer", "1000", "500", "0.02", "0.05", "5", "5")
 numrep <- as.numeric(args[1])
 type <- as.character(args[2])
 n <- as.numeric(args[3])
@@ -89,7 +89,7 @@ Simulation_study <- function(seed, type, n, pk, nu_xy, ev_xy, Number) {
   return(metrics)
 }
 
-# a <- Simulation_study(seed = 1, type = "Layer", n = 100, pk = 20, nu_xy = 0.5, ev_xy = 0.1, Number = 2)
+#a <- Simulation_study(seed = 1, type = "Layer", n = 100, pk = 20, nu_xy = 0.5, ev_xy = 0.1, Number = 2)
 
 ########### Parallelise
 no_cores <- nchunks
@@ -159,3 +159,4 @@ ggplot(Metrics, aes(x=Specificity, y=forcats::fct_rev(model))) +
         axis.title.y = element_blank()) +
   ggtitle(title)
 dev.off()
+

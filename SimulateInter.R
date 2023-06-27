@@ -221,8 +221,7 @@ SimulateInter <- function(n = 100, pk = 10, xdata = NULL,
                               beta_abs = c(0.1, 1), beta_sign = c(-1, 1), continuous = TRUE,
                               ev_xy = 0.7,
                               type = "Pair",
-                              Number = 1,
-                              proportion = 1) {
+                              Number = 1) {
   # TODO in future versions: introduce more families ("multinomial" and "cox")
   # Checking that either n and pk or xdata are provided
   if (is.null(xdata)) {

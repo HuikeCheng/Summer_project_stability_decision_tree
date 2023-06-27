@@ -221,7 +221,6 @@ SimulateNonLinear <- function(n = 100, pk = 10, xdata = NULL,
                               beta_abs = c(0.1, 1), beta_sign = c(-1, 1), continuous = TRUE,
                               ev_xy = 0.7,
                               association = "Linear",
-                              threshold = NULL,
                               proportion = 1) {
   # TODO in future versions: introduce more families ("multinomial" and "cox")
   # Checking that either n and pk or xdata are provided
@@ -306,7 +305,7 @@ SimulateNonLinear <- function(n = 100, pk = 10, xdata = NULL,
       }
     }
     for (i in seq_along(id)) {
-      xTransformed[,id[i]] <- SimulateAssoc(xTransformed[,id[i]], association = association, threshold = threshold)
+      xTransformed[,id[i]] <- SimulateAssoc(xTransformed[,id[i]], association = association)
     }
   } else {
     stop("More than 1 outcome")
