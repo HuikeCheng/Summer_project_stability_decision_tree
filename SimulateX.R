@@ -14,32 +14,8 @@ SimulateAssoc <- function(x, association, sd = 0.1, width = 1) {
                     Cosine = function(x) {2*cos(x)})
   if (association == "Linear") {
     x <- x
-<<<<<<< HEAD
-  } else if (association == "Exponential") {
-    x <- exp(x)
-  } else if (association == "Log") {
-    x <- log(x)
-  } else if (association == "Quadratic") {
-    x <- x*x
-  } else if (association == "Sqrt") {
-    x <- sqrt(x)
-  } else if (association == "Sigmoidal") {
-    x <- 1/(1+exp(-2*x))
-  } else if (association == "Sine") {
-    x <- 2*sin(x)
-  } else if (association == "Heteroscedastic") {
-    x <- x*runif(n = length(x), min=-3, max=3)*rnorm(n = length(x), sd = sd)
-  } else if (association == "Absolute") {
-    x <- abs(x)
-  } else if (association == "Threshold") {
-    # Simple threshold effect
-    if (!is.null(threshold)) {
-      x[x<=threshold] <- min(x[x>=threshold])
-    }
-=======
   } else if (!(association %in% names(Functions))) {
     stop("Not recognised")
->>>>>>> c8235c1f41c8b8394c949083a96e6e51b66c3958
   } else {
     tmp <- which(names(Functions) == association)
     x <- Functions[[tmp]](x)

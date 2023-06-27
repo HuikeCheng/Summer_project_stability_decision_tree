@@ -1,11 +1,12 @@
 ######## pass in arguments
 args=commandArgs(trailingOnly=TRUE)
-#args <- c("100", "4", "1000", "500", "0.1")
+#args <- c("100", "4", "1000", "500", "0.1", "5")
 numrep <- as.numeric(args[1])
 height <- as.numeric(args[2])
 n <- as.numeric(args[3])
 pk <- as.numeric(args[4])
 ev_xy <- as.numeric(args[5])
+nchunks <- as.numeric(args[6])
 
 ######## create folder
 folder <- paste(paste0("Outputs/Tree"), height, n, pk, ev_xy, sep = "_")
