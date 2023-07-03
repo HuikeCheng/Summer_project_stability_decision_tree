@@ -94,10 +94,10 @@ Simulation_study <- function(seed, n, pk, association, sd) {
 ################ test all associations
 n <- 1000
 pk <- 500
-sd <- 1
+sd <- 10
 nchunks <- 5
 myassoc <- c("Heteroscedastic", "Absolute", "Quadratic", "Cosine", "Sine", "Indicator",
-             "SquareWave", "Sawtooth", "Exponential", "Sigmoidal", "Cubic", "Linear"  )
+             "SquareWave", "Sawtooth", "Exponential", "Sigmoidal", "Cubic", "Linear")
 
 no_cores <- nchunks
 cl <- makeCluster(no_cores)
@@ -183,5 +183,5 @@ p5 <- ggarrange(p1,p2,p3,p4,
 annotate_figure(p5, top = text_grob(title, color = "black", face = "bold", size = 14))
 
 ##### save output
-x1_mult_x2_sd1 <- list(metrics = metrics, selvars = selvars)
-saveRDS(x1_mult_x2_sd1, "x1_plus_x2_sd1.rds")
+x1_mult_x2_sd10 <- list(metrics = metrics, selvars = selvars)
+saveRDS(x1_mult_x2_sd10, "x1_plus_x2_sd10.rds")

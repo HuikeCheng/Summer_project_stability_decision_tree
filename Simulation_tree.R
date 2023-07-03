@@ -86,7 +86,7 @@ Simulation_study <- function(seed, height, n, pk, ev_xy) {
   return(metrics)
 }
 
-#a <- Simulation_study(seed = 1, height = 4, n = 100, pk = 50, ev_xy = 0.1)
+a <- Simulation_study(seed = 2, height = 4, n = 1000, pk = 500, ev_xy = 0.1)
 
 ########### Parallelise
 no_cores <- nchunks
@@ -94,7 +94,7 @@ cl <- makeCluster(no_cores)
 
 clusterEvalQ(cl, library(rpart))
 clusterEvalQ(cl, library(sharp))
-clusterEvalQ(cl, library(fake))
+clusterEvalQ(cl, library(data.tree))
 clusterExport(cl, c("numrep", "height", "n", "pk", "ev_xy",
                     "CART1", "CART2", "getBeta", "getCM", "getMetrics", "Simulation_study",
                     "SimulateTree"))

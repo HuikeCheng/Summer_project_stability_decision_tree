@@ -96,10 +96,10 @@ Simulation_study <- function(seed, n, pk, association, sd) {
 ################ test all associations
 n <- 1000
 pk <- 500
-sd <- 10
+sd <- 1
 nchunks <- 5
-myassoc <- c("Exponential", "Quadratic", "Cubic", "Sigmoidal", "Sine",
-             "Heteroscedastic", "Absolute", "Sawtooth", "SquareWave", "Indicator")
+myassoc <- c("Heteroscedastic", "Absolute", "Quadratic", "Cosine", "Sine", "Indicator",
+             "SquareWave", "Sawtooth", "Exponential", "Sigmoidal", "Cubic", "Linear")
 
 no_cores <- nchunks
 cl <- makeCluster(no_cores)
@@ -138,8 +138,6 @@ names(selvars) <- myassoc
 library(ggplot2)
 library(forcats)
 metrics$model <- factor(metrics$model, levels = unique(metrics$model))
-myassoc <- c("Absolute", "Quadratic", "Heteroscedastic", "Exponential", "Cubic", 
-             "Sine", "Sawtooth", "Sigmoidal", "SquareWave", "Indicator")
 metrics$Relationship <- factor(metrics$Relationship, levels=myassoc)
 title <- paste0("Y = nl(x1+x2), numrep = 1, n = 1000, pk = 500, sd = ", sd)
 
@@ -187,5 +185,5 @@ p5 <- ggarrange(p1,p2,p3,p4,
 annotate_figure(p5, top = text_grob(title, color = "black", face = "bold", size = 14))
 
 ##### save output
-x1_plus_x2_sd10 <- list(metrics = metrics, selvars = selvars)
-saveRDS(x1_plus_x2_sd10, "x1_plus_x2_sd10.rds")
+x1_plus_x2_sd1 <- list(metrics = metrics, selvars = selvars)
+saveRDS(x1_plus_x2_sd1, "x1_plus_x2_sd1.rds")

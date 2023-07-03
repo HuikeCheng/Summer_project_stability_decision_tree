@@ -18,7 +18,7 @@ SimulateTree <- function(height, n, pk, ev_xy) {
   df_plot[,1] <- paste(df_plot[,1], ">", split[,1], sep = " ")
   df_plot[,2] <- paste(df_plot[,2], ">", split[,2], sep = " ")
   df_plot[,3] <- paste(df_plot[,3], ">", split[,3], sep = " ")
-  df_plot$Leaf <- round(df_plot$Leaf, 2)
+  df_plot$Leaf <- round(df_plot$Leaf, 3)
   df_plot$pathString <- paste(df_plot[1,1], 
                               df_plot[,2], 
                               df_plot[,3],
@@ -28,7 +28,7 @@ SimulateTree <- function(height, n, pk, ev_xy) {
   
   ########## tree for climbing
   df_plot <- df
-  df_plot$Leaf <- round(df_plot$Leaf, 2)
+  df_plot$Leaf <- round(df_plot$Leaf, 3)
   df_plot$pathString <- paste(df_plot[,1], 
                               df_plot[,2], 
                               df_plot[,3],
