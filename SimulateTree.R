@@ -108,23 +108,27 @@ SimulateTree <- function(height, n, pk, ev_xy, X=NULL, Y=NULL) {
   positions[,1] <- tmp
   
   # layer 2
-  for (i in 1:n) {
-    col <- tree$Climb(position = tmp[i])$Get('name')[1]
-    cutoff <- cv[col, 2]
-    tmp[i] <- xdata[i,col] > 0
-  }
-  tmp <- as.numeric(tmp) + 1
-  positions[,2] <- tmp
-  
-  # layer 3+
-  for (layer in 2:(nlayer-1)) {
+  if (nlayer >= 2) {
     for (i in 1:n) {
-      col <- tree$Climb(position = unlist(positions[i,1:layer]))$Get('name')[1]
-      cutoff <- cv[col,layer+1]
-      tmp[i] <- xdata[i, col] > 0
+      col <- tree$Climb(position = tmp[i])$Get('name')[1]
+      cutoff <- cv[col, 2]
+      tmp[i] <- xdata[i,col] > 0
     }
     tmp <- as.numeric(tmp) + 1
-    positions[,layer+1] <- tmp
+    positions[,2] <- tmp
+  }
+  
+  # layer 3+
+  if (nlayer >= 3) {
+    for (layer in 2:(nlayer-1)) {
+      for (i in 1:n) {
+        col <- tree$Climb(position = unlist(positions[i,1:layer]))$Get('name')[1]
+        cutoff <- cv[col,layer+1]
+        tmp[i] <- xdata[i, col] > 0
+      }
+      tmp <- as.numeric(tmp) + 1
+      positions[,layer+1] <- tmp
+    }
   }
   
   # get ypred
