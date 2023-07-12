@@ -47,3 +47,29 @@ getBeta <- function(vars, Tvars, beta) {
   }
   return(out)
 }
+
+ReorderCV <- function(varname, vp) {
+  order <- which(colSums(vp) != 0)
+  order <- order[length(order)]
+  for(i in order:1) {
+    if (sum(vp[,i] != 0) > 0) {
+      row_num <- which(vp[,i] != 0)[1]
+      previous <- which(vp[row_num, 1:i-1] != 0)
+      if (length(previous) > 0) {
+        previous <- previous[length(previous)]
+        previous_path <- vp[row_num, previous]
+        if (previous_path == 1) {
+          order <- c(order, previous)
+        } else if (previous_path == 2) {
+          order <- c(previous, order)
+        }
+      } else {
+        order <- c(order, i)
+      }
+    }
+  }
+  order <- unique(order)
+  return(order)
+}
+# for those that appeared twice but has no kin relationships, maybe do another check on vp
+# then, can comment out the order <- c(order,i) and unique（order)
