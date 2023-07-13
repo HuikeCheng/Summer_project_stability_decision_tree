@@ -67,7 +67,7 @@ SimulateTree <- function(height, n, pk, ev_xy, X=NULL, Y=NULL) {
       vp <- apply(structure, 2, FUN = function(x) {ifelse(x != i, 0, 1)})
       vp <- vp*path
       if (any(apply(vp, 1, FUN = function(x){sum(x!=0)})) > 1) {
-        order <- ReorderCV(varname = i, vp = vp)
+        order <- reorderCV(varname = i, vp = vp)
         values <- unlist(cv[i, !is.na(cv[i,])])
         cv[i, order] <- sort(values)
       }

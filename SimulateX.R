@@ -1,4 +1,4 @@
-SimulateAssoc <- function(x, association, sd = 0.1, width = 1) {
+transformX <- function(x, association, sd = 0.1, width = 1) {
   Functions <- list(Exponential = function(x){exp(x)},
                     Quadratic = function(x){x*x},
                     Log = function(x){log(x)},
@@ -26,17 +26,42 @@ SimulateAssoc <- function(x, association, sd = 0.1, width = 1) {
   return(x)
 }
 
-CombineX <- function(x, type) {
-  if (type == "Addition") {
-    beta <- rep(1, ncol(x))
-    out <- x%*%beta
-  } else if (type == "Multiplication") {
-    out <- x[,1]
-    for (i in 2:ncol(x)) {
-      out <- out*x[,i]
-    }
-  }
-  return(out)
+# combineX <- function(X, type) {
+#   if (type == "Addition") {
+#     beta <- rep(1, ncol(X))
+#     out <- X%*%beta
+#   } else if (type == "Multiplication") {
+#     out <- X[,1]
+#     for (i in 2:ncol(X)) {
+#       out <- out*X[,i]
+#     }
+#   }
+#   return(out)
+# }
+
+HugeAdjacency <- function(pk = 10, topology = "random", nu = 0.1, ...) {
+  # Storing extra arguments
+  extra_args <- list(...)
+  
+  # Extracting relevant extra arguments
+  tmp_extra_args <- MatchingArguments(extra_args = extra_args, FUN = huge::huge.generator)
+  tmp_extra_args <- tmp_extra_args[!names(tmp_extra_args) %in% c("n", "d", "prob", "graph", "verbose")]
+  
+  # Running simulation model
+  mymodel <- do.call(huge::huge.generator, args = c(
+    list(
+      n = 2, d = sum(pk), prob = nu,
+      graph = topology, verbose = FALSE
+    ),
+    tmp_extra_args
+  ))
+  theta <- as.matrix(mymodel$theta)
+  
+  # Re-organising the variables to avoid having centrality related to variable ID (e.g. for scale-free models)
+  ids <- sample(ncol(theta))
+  theta <- theta[ids, ids]
+  
+  return(theta)
 }
 
 
