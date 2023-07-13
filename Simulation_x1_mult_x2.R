@@ -1,6 +1,6 @@
 ######## pass in arguments
 args=commandArgs(trailingOnly=TRUE)
-#args <- c("100", "1000", "500", "0.2", "2","50")
+# args <- c("100", "1000", "500", "0.2", "2","50")
 numrep <- as.numeric(args[1])
 n <- as.numeric(args[2])
 pk <- as.numeric(args[3])
@@ -133,7 +133,7 @@ Simulation_study <- function(seed, n, pk, association, ev_xy, numtrue = 2, multi
   return(metrics)
 }
 
-a <- Simulation_study(seed = 1, n = 1000, pk = 500, association = "Linear", ev_xy = 0.2, numtrue = 3)
+# a <- Simulation_study(seed = 1, n = 1000, pk = 500, association = "Linear", ev_xy = 0.2, numtrue = 3)
 
 #########################
 Simulation <- function(seed, n, pk, myassoc, ev_xy, numtrue) {
