@@ -77,7 +77,7 @@ Simulation_study <- function(seed, n, pk, association, ev_xy, numtrue = 2, multi
   
   ######## run CART
   mydata <- data.frame(ydata = ydata[, 1], xdata)
-  cart <- rpart(ydata ~ ., mydata, method="anova")
+  cart <- rpart(ydata ~ ., mydata, method = "anova")
   
   myvars <- unique(rownames(cart$splits))
   selvars <- rep(0, pk)
@@ -86,7 +86,7 @@ Simulation_study <- function(seed, n, pk, association, ev_xy, numtrue = 2, multi
   metrics$CART <- getMetrics(selvars = selvars, theta = theta)
   
   ######## run CART-maxsurrogate = 0
-  cartms0 <- rpart(ydata ~ ., mydata, method="anova", maxsurrogate = 0)
+  cartms0 <- rpart(ydata ~ ., mydata, method = "anova", maxsurrogate = 0)
   
   myvars <- unique(rownames(cartms0$splits))
   selvars <- rep(0, pk)
