@@ -225,3 +225,22 @@ plot(simul$tree)
 # 
 # ##### Change to data.frame
 # df <- ToDataFrameTypeCol(tree)
+
+library(data.tree)
+
+df <- data.frame(matrix(NA, nrow=4,ncol=3))
+df[,1] <- rep("node1", 4)
+df[,2] <- rep(c("node2", "node3"), each=2)
+df[,3] <- c("node4", "node5", "node6", "node7")
+
+df$pathString <- apply(df, 1, FUN=function(x){paste0(x,collapse="/")})
+
+tree <- as.Node(df)
+SetNodeStyle(tree, style = "rounded", shape = "box")
+plot(tree)
+
+Prune(tree, pruneFun = function(x) {!("node4" %in% x$Get("name") & isLeaf(x))})
+plot(tree)
+
+Prune(tree, pruneFun = function(x) {!("node4" %in% x$Get("name") & x$level == 2)})
+plot(tree)

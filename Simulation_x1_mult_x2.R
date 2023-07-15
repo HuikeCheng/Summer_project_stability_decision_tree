@@ -46,6 +46,7 @@ Simulation_study <- function(seed, n, pk, association, ev_xy, numtrue = 2, multi
       scale = TRUE, output_matrices = FALSE
     )
     xdata <- xsimul$data
+    print("mn")
   } else {
     xdata <- matrix(rnorm(n*pk),n,pk)
     colnames(xdata) <- paste0("var", 1:pk)
@@ -61,6 +62,7 @@ Simulation_study <- function(seed, n, pk, association, ev_xy, numtrue = 2, multi
   } else {
     stop("numtrue must be at least 2")
   }
+  
   ypred <- transformX(mu, association)
   sigma <- sqrt((1 - ev_xy) / ev_xy * stats::var(ypred))
   ydata <- stats::rnorm(n = n, mean = ypred, sd = sigma)
@@ -235,9 +237,9 @@ ggplot(Metrics, aes(x=HD, fill=forcats::fct_rev(model), y=Relationship)) +
   geom_boxplot() +
   coord_flip() +
   labs(x = "Hamming distance")
-  theme(legend.title = element_blank(),
-        axis.title.x = element_blank(),
-        legend.position = "bottom") +
+theme(legend.title = element_blank(),
+      axis.title.x = element_blank(),
+      legend.position = "bottom") +
   scale_y_discrete(guide = guide_axis(angle = 45)) +
   ggtitle(title)
 dev.off()
