@@ -115,11 +115,6 @@ out <- pblapply(1:numrep,
 stopCluster(cl)
 
 ########### cleanup output
-Metrics <- vector("list", length = numrep)
-for (i in seq_along(out)) {
-  Metrics[[i]] <- as.data.frame(list.rbind(out[[i]]))
-  Metrics[[i]]$model <- rownames(Metrics[[i]])
-}
 Metrics <- list.rbind(Metrics)
 Metrics$model <- factor(Metrics$model, levels = unique(Metrics$model))
 
