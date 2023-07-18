@@ -236,7 +236,7 @@ png(file = paste(folder,"HD.png", sep = "/"))
 ggplot(Metrics, aes(x=HD, fill=forcats::fct_rev(model), y=Relationship)) +
   geom_boxplot() +
   coord_flip() +
-  labs(x = "Hamming distance")
+  labs(x = "Hamming distance") +
 theme(legend.title = element_blank(),
       axis.title.x = element_blank(),
       legend.position = "bottom") +

@@ -4,11 +4,11 @@ args=commandArgs(trailingOnly=TRUE)
 numrep <- as.numeric(args[1])
 n <- as.numeric(args[2])
 pk <- as.numeric(args[3])
-sd <- as.numeric(args[4])
+ev_xy <- as.numeric(args[4])
 nchunks <- as.numeric(args[5])
 
 ######## create folder
-folder <- paste(paste0("Outputs/", Complex1), n, pk, sd, sep = "_")
+folder <- paste(paste0("Outputs/", "Complex1"), n, pk, ev_xy, sep = "_")
 if (file.exists(folder) == FALSE) {
   dir.create(folder)
 }
@@ -26,66 +26,99 @@ library(ggplot2)
 source("stab1.R")
 source("stab2.R")
 source("Functions.R")
+source("SimulateX.R")
 
 ####################### Set up simulation study ################################
-Simulation_study <- function(seed, n, pk, association, sd) {
-  # set seed
+Simulation_study <- function(seed, n, pk, ev_xy, multivariate_normal = TRUE) {
+  ##### set seed
   set.seed(seed)
-  # simulate data
-  X <- matrix(rnorm(n*pk),n,pk)
-  Y <- 0.5*X[,1] + 0.45*X[,2] + 0.3*X[,3] + 
-    1.5*ifelse(X[,1]<=0 & X[,2]>0 & X[,3] <= 0, 1, 0) +
-    0.25*ifelse(X[,1]<=0 & X[,3]>0, 1, 0) + 
-    0.14*ifelse(X[,1]>0 & X[,2] > 0, 1, 0) + 
-    rnorm(n,0,sd)
-  colnames(X) <- paste0("var", 1:pk)
-  simul <- list(ydata=as.matrix(Y), xdata=X)
+  ##### simulate data
+  # simulate xdata
+  if (multivariate_normal == TRUE) {
+    xsimul <- SimulateGraphical(
+      n = n, pk = pk, theta = NULL,
+      implementation = HugeAdjacency, topology = "random",
+      nu_within = 0, nu_between = 0, nu_mat = NULL,
+      v_within = 0, v_between = 0,
+      v_sign = c(-1, 1), continuous = TRUE,
+      pd_strategy = "diagonally_dominant", ev_xx = NULL, scale_ev = TRUE,
+      u_list = c(1e-10, 1), tol = .Machine$double.eps^0.25,
+      scale = TRUE, output_matrices = FALSE
+    )
+    xdata <- xsimul$data
+    print("mn")
+  } else {
+    xdata <- matrix(rnorm(n*pk),n,pk)
+    colnames(xdata) <- paste0("var", 1:pk)
+  }
+  # simulate ydata
+  ypred <- 0.5*xdata[,1] + 0.45*xdata[,2] + 0.3*xdata[,3] + 
+    1.5*ifelse(xdata[,1]<=0 & xdata[,2]>0 & xdata[,3] <= 0, 1, 0) +
+    0.25*ifelse(xdata[,1]<=0 & xdata[,3]>0, 1, 0) + 
+    0.14*ifelse(xdata[,1]>0 & xdata[,2] > 0, 1, 0)
   
-  # vars
-  myvars_T <- paste0("var", c(1,2,3))
-  myvars_F <- paste0("var", c(4:pk))
+  sigma <- sqrt((1 - ev_xy) / ev_xy * stats::var(ypred))
+  ydata <- stats::rnorm(n = n, mean = ypred, sd = sigma)
+  ydata <- as.matrix(ydata)
+  
+  # theta
+  theta <- rep(0, pk)
+  names(theta) <- colnames(xdata)
+  theta[1:3] <- 1
   
   # set up output
-  metrics <- vector("list", length = 4)
-  names(metrics) <- c("CART", "stab1", "stab2", "LASSO")
+  metrics <- vector("list", length = 5)
+  names(metrics) <- c("CART", "CART_ms0", "sCART1", "sCART2", "sLASSO")
   
   ######## run CART
-  mydata <- data.frame(ydata = simul$ydata[, 1], simul$xdata)
-  mycart <- rpart(ydata ~ ., mydata, method="anova")
+  mydata <- data.frame(ydata = ydata[, 1], xdata)
+  cart <- rpart(ydata ~ ., mydata, method = "anova")
   
-  myvars <- unique(rownames(mycart$splits))
-  metrics$CART <- getMetrics(getCM(vars = myvars, Tvars = myvars_T, Fvars = myvars_F))
+  myvars <- unique(rownames(cart$splits))
+  selvars <- rep(0, pk)
+  names(selvars) <- colnames(xdata)
+  selvars[which(names(selvars) %in% myvars)] <- 1
+  metrics$CART <- getMetrics(selvars = selvars, theta = theta)
+  
+  ######## run CART-maxsurrogate = 0
+  cartms0 <- rpart(ydata ~ ., mydata, method = "anova", maxsurrogate = 0)
+  
+  myvars <- unique(rownames(cartms0$splits))
+  selvars <- rep(0, pk)
+  names(selvars) <- colnames(xdata)
+  selvars[which(names(selvars) %in% myvars)] <- 1
+  metrics$CART_ms0 <- getMetrics(selvars = selvars, theta = theta)
   
   ######### run stab1
-  stab1 <- sharp::VariableSelection(
-    xdata = simul$xdata, ydata = simul$ydata,
+  scart1 <- sharp::VariableSelection(
+    xdata = xdata, ydata = ydata,
     implementation = CART1,
     family = "gaussian",
     maxsurrogate = 0)
   
-  myvars <- names(SelectedVariables(stab1))[which(SelectedVariables(stab1)!=0)]
-  metrics$stab1 <- getMetrics(getCM(vars = myvars, Tvars = myvars_T, Fvars = myvars_F))
+  selvars <- SelectedVariables(scart1)
+  metrics$sCART1 <- getMetrics(selvars = selvars, theta = theta)
   
   ####### run stab2
-  Lambda <- mycart$cptable[,1]
-  stab2 <- sharp::VariableSelection(
-    xdata = simul$xdata, ydata = simul$ydata,
+  Lambda <- cart$cptable[,1]
+  scart2 <- sharp::VariableSelection(
+    xdata = xdata, ydata = ydata,
     implementation = CART2,
     family = "gaussian",
     Lambda = Lambda,
     maxsurrogate = 0)
   
-  myvars <- names(SelectedVariables(stab2))[which(SelectedVariables(stab2)!=0)]
-  metrics$stab2 <- getMetrics(getCM(vars = myvars, Tvars = myvars_T, Fvars = myvars_F))
+  selvars <- SelectedVariables(scart2)
+  metrics$sCART2 <- getMetrics(selvars = selvars, theta = theta)
   
   ####### run Stability-lasso
-  lasso <- sharp::VariableSelection(
-    xdata = simul$xdata, ydata = simul$ydata,
+  slasso <- sharp::VariableSelection(
+    xdata = xdata, ydata = ydata,
     implementation = PenalisedRegression,
     family = "gaussian")
   
-  myvars <- names(SelectedVariables(lasso))[which(SelectedVariables(lasso)!=0)]
-  metrics$LASSO <- getMetrics(getCM(vars = myvars, Tvars = myvars_T, Fvars = myvars_F))
+  selvars <- SelectedVariables(slasso)
+  metrics$sLASSO <- getMetrics(selvars = selvars, theta = theta)
   
   ####### Cleanup output
   metrics <- as.data.frame(list.rbind(metrics))
@@ -95,7 +128,7 @@ Simulation_study <- function(seed, n, pk, association, sd) {
   return(metrics)
 }
 
-# a <- Simulation_study(seed = 1, n = 100, pk = 50, sd = 0.1)
+# a <- Simulation_study(seed = 1, n = 100, pk = 50, ev_xy = 0.1)
 
 ########### Parallelise
 no_cores <- nchunks
@@ -104,12 +137,12 @@ cl <- makeCluster(no_cores)
 clusterEvalQ(cl, library(rpart))
 clusterEvalQ(cl, library(sharp))
 clusterEvalQ(cl, library(fake))
-clusterExport(cl, c("numrep", "n", "pk", "sd",
-                    "CART1", "CART2", "getBeta", "getCM", "getMetrics", "Simulation_study"))
+clusterEvalQ(cl, library(rlist))
+clusterExport(cl, c("numrep", "n", "pk", "ev_xy", "HugeAdjacency",
+                    "CART1", "CART2", "getMetrics", "Simulation_study"))
 
 out <- pblapply(1:numrep,
-                function(i) {Simulation_study(seed = i, association = association, 
-                                              n = n, pk = pk, sd = sd)},
+                function(i) {Simulation_study(seed = i, n = n, pk = pk, ev_xy = ev_xy)},
                 cl = cl)
 
 stopCluster(cl)
@@ -122,7 +155,7 @@ Metrics$model <- factor(Metrics$model, levels = unique(Metrics$model))
 saveRDS(Metrics, file = paste(folder,"Metrics.rds", sep = "/"))
 
 ########### plots - Metrics
-title <- paste("Complex1: ", "n = ", n, ", pk = ", pk, ", sd = ", sd, sep = "")
+title <- paste("Complex1: ", "n = ", n, ", pk = ", pk, ", ev_xy = ", ev_xy, sep = "")
 
 png(file = paste(folder,"Recall.png", sep = "/"))
 ggplot(Metrics, aes(x=Recall, y=forcats::fct_rev(model))) +
@@ -154,5 +187,14 @@ ggplot(Metrics, aes(x=Specificity, y=forcats::fct_rev(model))) +
   geom_boxplot() +
   theme(legend.title = element_blank(),
         axis.title.y = element_blank()) +
+  ggtitle(title)
+dev.off()
+
+png(file = paste(folder,"HD.png", sep = "/"))
+ggplot(Metrics, aes(x=HD, y=forcats::fct_rev(model))) +
+  geom_boxplot() +
+  theme(legend.title = element_blank(),
+        axis.title.y = element_blank()) +
+  labs(x = "Hamming distance")
   ggtitle(title)
 dev.off()

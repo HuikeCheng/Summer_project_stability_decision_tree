@@ -25,6 +25,32 @@ getMetrics <- function(selvars, theta) {
 # myvars <- c(0,1,0,1,0,0)
 # getMetrics(vars, myvars)
 
+HugeAdjacency <- function(pk = 10, topology = "random", nu = 0.1, ...) {
+  # Storing extra arguments
+  extra_args <- list(...)
+  
+  # Extracting relevant extra arguments
+  tmp_extra_args <- MatchingArguments(extra_args = extra_args, FUN = huge::huge.generator)
+  tmp_extra_args <- tmp_extra_args[!names(tmp_extra_args) %in% c("n", "d", "prob", "graph", "verbose")]
+  
+  # Running simulation model
+  mymodel <- do.call(huge::huge.generator, args = c(
+    list(
+      n = 2, d = sum(pk), prob = nu,
+      graph = topology, verbose = FALSE
+    ),
+    tmp_extra_args
+  ))
+  theta <- as.matrix(mymodel$theta)
+  
+  # Re-organising the variables to avoid having centrality related to variable ID (e.g. for scale-free models)
+  ids <- sample(ncol(theta))
+  theta <- theta[ids, ids]
+  
+  return(theta)
+}
+
+
 # getCM <- function(vars, Tvars, Fvars) {
 #   cm <- matrix(0, nrow = 2, ncol = 2)
 #   cm[1,1] <- sum(Tvars %in% vars)
@@ -74,6 +100,12 @@ getMetrics <- function(selvars, theta) {
 #   }
 #   return(out)
 # }
+
+Bin2Dec <- function(x) {
+  x <- sum(2^(which(rev(x) == 1) - 1))
+  return(x)
+}
+
 
 reorderCV <- function(varname, vp) {
   order <- which(colSums(vp) != 0)

@@ -225,86 +225,40 @@ SimulateTree <- function(height, n, pk, ev_xy, X=NULL, Y=NULL, Y_abs = 3, repeat
   ##### set theta
   var_final <- unique(tree$Get('name', filterFun = isNotLeaf))
   theta <- rep(0, pk)
-  theta <- as.matrix(theta)
-  rownames(theta) <- colnames(xdata)
-  theta[which(rownames(theta) %in% var_final)] <- 1
+  names(theta) <- colnames(xdata)
+  theta[which(names(theta) %in% var_final)] <- 1
   
   # output
   return(list(xdata = xdata, ydata = ydata, theta = theta, tree = tree_display))
 }
 
-#
+#####################
+library(data.tree)
+library(fake)
+source("Functions.R")
+
 height <- 5
 n <- 1000
 pk <- 500
 ev_xy <- 0.1
 X <- NULL
 Y <- NULL
-
-start.time <- Sys.time()
-set.seed(1)
+# 
+# start.time <- Sys.time()
+set.seed(4)
 simul <- SimulateTree(height, n, pk, ev_xy, X, Y)
-end.time <- Sys.time()
-time.taken <- end.time - start.time
-time.taken 
-# 4: 6.12 s
-# 5: 5.95 s
+# end.time <- Sys.time()
+# time.taken <- end.time - start.time
+# time.taken 
+# # 4: 6.06 s
+# # 5: 7.40 s
 plot(simul$tree)
 
-# things to work on further adjustments, or alternatives to pruning
+# things to work on
 # add parameter to adjust allow repeat or not. done
-# check subgroup means, if too close, not meaningful?
+# check subgroup means, if too close, not meaningful? weak predictor
 # another check, when sample size too small, height to big, all groups could be empty? added warning for height
 
-
-# ##### Simulate tree structure
-# tree1 <- CreateRegularTree(4, 2)
-# SetNodeStyle(tree, style = "rounded", shape = "box")
-# plot(tree1)
-# print(tree)
-# #### Set splits for nodes
-# 
 # 
 # ##### Change to data.frame
 # df <- ToDataFrameTypeCol(tree)
-
-# library(data.tree)
-# 
-# df <- data.frame(matrix(NA, nrow=4,ncol=3))
-# df[,1] <- rep("node1", 4)
-# df[,2] <- rep(c("node2", "node3"), each=2)
-# df[,3] <- c("node4", "node5", "node6", "node7")
-# colnames(df) <- c("Level1", "Level2", "Leaf")
-# 
-# empty_groups <- c("node4", "node5")
-# 
-# # pruning
-# index <- which(df$Leaf %in% empty_groups)
-# df <- df[-index,]
-# 
-# # remove extraneous split
-# df$tmp <- rep("", nrow(df))
-# for (level in nlayer:1) {
-#   for (i in df[,level]) {
-#     index <- which(df[,level] == i)
-#     numchild <- length(unique(df[index,(level+1)]))
-#     if (numchild < 2) {
-#       df[index,level:height] <- df[index,(level+1):(height+1)]
-#     }
-#   }
-# }
-# 
-# index <- which(apply(df,2,FUN = function(x){sum(x!="")}) == 0)
-# df <- df[,-index]
-# 
-# df$pathString <- apply(df, 1, FUN=function(x){paste0(x,collapse="/")})
-# 
-# tree <- as.Node(df)
-# SetNodeStyle(tree, style = "rounded", shape = "box")
-# plot(tree)
-# 
-# Prune(tree, pruneFun = function(x) {!("node4" %in% x$Get("name") & isLeaf(x))})
-# plot(tree)
-# 
-# Prune(tree, pruneFun = function(x) {!("node4" %in% x$Get("name") & x$level == 2)})
-# plot(tree)
