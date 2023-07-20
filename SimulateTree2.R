@@ -32,11 +32,11 @@ SimulateTree <- function(height, n, pk, ev_xy, X=NULL, Y=NULL, Y_abs = 3, repeat
   if (repeated_pred == TRUE) {
     # calculate max number of predictors in tree
     mn <- ngroups-1
-    if(mn > pk) {
-      mn <- pk
+    if(mn > ncol(xdata)) {
+      mn <- ncol(xdata)
     }
     # sample mn number of candidate predictors
-    xs <- sample(colnames(xdata), mn)
+    xs <- sample(1:ncol(xdata), mn)
     # sample predictors in tree from the mn predictors
     for (i in 1:nlayer) {
       df[,i] <- rep(sample(xs, 2^(i-1)), each = 2^(height-i))
@@ -44,7 +44,7 @@ SimulateTree <- function(height, n, pk, ev_xy, X=NULL, Y=NULL, Y_abs = 3, repeat
   } else {
     # sample predictors in tree from colnames(xdata)
     for (i in 1:nlayer) {
-      df[,i] <- rep(sample(colnames(xdata), 2^(i-1)), each = 2^(height-i))
+      df[,i] <- rep(sample(1:ncol(xdata), 2^(i-1)), each = 2^(height-i))
     }
   }
   # predictors in tree
@@ -52,7 +52,11 @@ SimulateTree <- function(height, n, pk, ev_xy, X=NULL, Y=NULL, Y_abs = 3, repeat
   
   ##### simulate subgroup mean
   if (!is.null(Y)) {
-    df[,height] <- Y
+    if (length(Y) == ngroups) {
+      df[,height] <- Y
+    } else {
+      stop("number of subgroup means provided does not equal number of subgroups")
+    }
   } else {
     df[,height] <- runif(ngroups, min = -Y_abs, max = Y_abs)
   }
@@ -83,9 +87,9 @@ SimulateTree <- function(height, n, pk, ev_xy, X=NULL, Y=NULL, Y_abs = 3, repeat
   }
   path[,nlayer] <- rep(3, nrow(path))
   
-  for (i in uxs) {
+  for (i in seq_along(uxs)) {
     if (sum(!is.na(cv[i,])) > 1) {
-      vp <- apply(structure, 2, FUN = function(x) {ifelse(x != i, 0, 1)})
+      vp <- apply(structure, 2, FUN = function(x) {ifelse(x != uxs[i], 0, 1)})
       vp <- vp*path
       if (any(apply(vp, 1, FUN = function(x){sum(x!=0)}) > 1)) {
         order <- reorderCV(vp = vp)
@@ -100,133 +104,104 @@ SimulateTree <- function(height, n, pk, ev_xy, X=NULL, Y=NULL, Y_abs = 3, repeat
   split <- as.data.frame(matrix(0, ngroups, nlayer))
   colnames(split) <- colnames(df)[-height]
   for (i in seq_along(split)) {
-    cols <- colnames(split)[i]
-    tmp <- df[,i]
-    for (j in seq_along(tmp)) {
-      varname <- tmp[j]
-      split[j,i] <- cv[varname, cols]
-    }
+    tmp <- as.character(df[,i])
+    split[,i] <- cv[tmp,i]
   }
   # df for plot
   df_plot <- df
   df_plot$Leaf <- round(df_plot$Leaf, 2)
   for (i in 1:nlayer) {
-    df_plot[,i] <- paste(df_plot[,i], ">", round(split[,i], 2), sep = " ")
+    df_plot[,i] <- paste("var", df_plot[,i], " > ", round(split[,i], 2), sep = "")
   }
   
-  df_plot$pathString <- rep("", ngroups)
-  df_plot$pathString <- apply(df_plot, 1, FUN=function(x){paste0(x,collapse="/")})
-  
   ##### climbing tree
-  # tree for climbing
-  df_tree <- df
-  df_tree$Leaf <- paste0("Group", 1:(2^nlayer))
-  df_tree$pathString <- rep("", ngroups)
-  df_tree$pathString <- apply(df_tree, 1, FUN=function(x){paste0(x,collapse="/")})
-  
-  tree <- as.Node(df_tree)
-  
-  # set y data for tree
-  tree$Set(y = df$Leaf,
-           filterFun = isLeaf)
-  
   # climb tree to get y data
   tmp <- vector("character", length = n)
-  positions <- as.data.frame(matrix(0, n, nlayer))
+  positions <- as.data.frame(matrix(NA, n, nlayer))
   colnames(positions) <- paste0("Level", 1:nlayer)
   
   # layer 1
-  col <- tree$Get('name', filterFun = isRoot)
-  tmp <- rep(col, n)
-  cutoff <- cv[col, 1]
+  col <- xs[[1]] # var at root
+  cutoff <- cv[as.character(col), 1]
   tmp <- xdata[,col] > cutoff
-  tmp <- as.numeric(tmp) + 1 # TRUE -> 2, FALSE -> 1
-  positions[,1] <- tmp
+  positions[,1] <- as.numeric(tmp) # TRUE -> 1, FALSE -> 0
   
   # layer 2
-  if (nlayer >= 2) {
-    for (i in 1:n) {
-      col <- tree$Climb(position = tmp[i])$Get('name')[1]
-      cutoff <- cv[col, 2]
-      tmp[i] <- as.numeric(xdata[i,col] > cutoff)
-    }
-    tmp <- as.numeric(tmp) + 1
-    positions[,2] <- tmp
-  }
+  index <- positions[,1] + 1
+  col <- xs[[2]][index]
+  cutoff <- cv[as.character(col),2]
+  tmp <- xdata[cbind(1:n,col)] > cutoff
+  positions[,2] <- as.numeric(tmp)
   
   # layer 3+
-  if (nlayer >= 3) {
-    for (layer in 2:(nlayer-1)) {
-      for (i in 1:n) {
-        col <- tree$Climb(position = unlist(positions[i,1:layer]))$Get('name')[1]
-        cutoff <- cv[col,layer+1]
-        tmp[i] <- as.numeric(xdata[i, col] > cutoff)
-      }
-      tmp <- as.numeric(tmp) + 1
-      positions[,layer+1] <- tmp
-    }
+  for (i in 3:nlayer) {
+    index <- apply(positions[,1:(i-1)], 1, Bin2Dec) + 1
+    col <- xs[[i]][index]
+    cutoff <- cv[as.character(col),i]
+    tmp <- xdata[cbind(1:n, col)] > cutoff
+    positions[,i] <- as.numeric(tmp)
   }
   
   # get ypred
-  groups <- vector("numeric", length = n)
-  for (i in 1:n) {
-    tmp[i] <- tree$Climb(position = unlist(positions[i,1:nlayer]))$y
-    groups[i] <- tree$Climb(position = unlist(positions[i,1:nlayer]))$Get('name')
-  }
+  groups <- apply(positions[,1:nlayer], 1, Bin2Dec) + 1
+  ypred <- df[groups,height]
   
   # generate ydata
-  sigma <- sqrt((1 - ev_xy) / ev_xy * stats::var(tmp))
+  sigma <- sqrt((1 - ev_xy) / ev_xy * stats::var(ypred))
   
   # Sampling from Normal distribution
-  ydata <- stats::rnorm(n = n, mean = tmp, sd = sigma)
+  ydata <- stats::rnorm(n = n, mean = ypred, sd = sigma)
   ydata <- as.matrix(ydata)
   rownames(ydata) <- rownames(xdata) <- paste0("obs", 1:n)
   colnames(ydata) <- "outcome1"
   
   ##### check number of obs in each subgroup
   size <- summary(factor(groups))
-  if (sum(!df_tree$Leaf %in% names(size)) > 0) {
+  if (sum(!(1:ngroups) %in% names(size)) > 0) {
     # empty groups
-    empty_groups <- df_tree$Leaf[which(!df_tree$Leaf %in% names(size))]
-    df_tree$pathString <- rep("", ngroups)
-    df_plot$pathString <- rep("", ngroups)
+    empty_groups <- which(!(1:ngroups) %in% names(size))
+    df$emptycol <- rep("", ngroups)
+    df_plot$emptycol <- rep("", ngroups)
     # pruning
-    index <- which(df_tree$Leaf %in% empty_groups)
-    df_tree <- df_tree[-index,]
-    df_plot <- df_plot[-index,]
+    df <- df[-empty_groups,]
+    df_plot <- df_plot[-empty_groups,]
     
     # remove extraneous split
-    for (level in nlayer:1) {
-      for (i in unique(df_tree[,level])) {
-        index <- which(df_tree[,level] == i)
-        numchild <- length(unique(df_tree[index,(level+1)]))
+    for (layer in nlayer:1) {
+      for (i in unique(df[,layer])) {
+        index <- which(df[,layer] == i)
+        numchild <- length(unique(df[index,(layer+1)]))
         if (numchild < 2) {
-          df_tree[index,level:height] <- df_tree[index,(level+1):(height+1)]
-          df_plot[index,level:height] <- df_plot[index,(level+1):(height+1)]
+          df[index,layer:height] <- df[index,(layer+1):(height+1)]
+          df_plot[index,layer:height] <- df_plot[index,(layer+1):(height+1)]
         }
       }
     }
-    index <- which(apply(df_tree,2,FUN = function(x){sum(x!="")}) == 0)
-    if (length(index) > 1) {
-      warning("Final tree height =", height-(index-1))
+    # remove emptycol used for pruning
+    df <- df[,-(height+1)]
+    df_plot <- df_plot[,-(height+1)]
+    # check if final height is still height asked
+    emptylevels <- which(apply(df,2,FUN = function(x){sum(x!="")}) == 0)
+    if (length(emptylevels) > 0) {
+      df <- df[,-emptylevels]
+      df_plot <- df_plot[,-emptylevels]
+      warning(paste0("Final tree height = ", height-(length(emptylevels))))
     }
-    df_tree <- df_tree[,-index]
-    df_plot <- df_plot[,-index]
-    
-    df_tree$pathString <- apply(df_tree, 1, FUN=function(x){paste0(x,collapse="/")})
-    df_plot$pathString <- apply(df_plot, 1, FUN=function(x){paste0(x,collapse="/")})
-    tree <- as.Node(df_tree)
   }
   
   # get tree for display
+  df_plot$pathString <- apply(df_plot, 1, FUN=function(x){paste0(x,collapse="/")})
   tree_display <- as.Node(df_plot)
   SetNodeStyle(tree_display, style = "rounded", shape = "box")
   
   ##### set theta
-  var_final <- unique(tree$Get('name', filterFun = isNotLeaf))
+  df$pathString <- apply(df, 1, FUN=function(x){paste0(x,collapse="/")})
+  tree <- as.Node(df)
+  var_final <- as.numeric(unique(tree$Get('name', filterFun = isNotLeaf)))
   theta <- rep(0, pk)
-  names(theta) <- colnames(xdata)
-  theta[which(names(theta) %in% var_final)] <- 1
+  theta <- as.matrix(theta)
+  rownames(theta) <- colnames(xdata)
+  theta[var_final] <- 1
   
   # output
   return(list(xdata = xdata, ydata = ydata, theta = theta, tree = tree_display))
@@ -249,13 +224,14 @@ end.time <- Sys.time()
 time.taken <- end.time - start.time
 time.taken
 # # 4:  s
-# # 5: 12.59 s
-plot(simul$tree)
+# # 5: 7.42 s
+# plot(simul$tree)
 
 # things to work on
 # add parameter to adjust allow repeat or not. done
 # check subgroup means, if too close, not meaningful? weak predictor
 # another check, when sample size too small, height to big, all groups could be empty? added warning for height
+# check at the end if tree has any problems, if data correctly end up in groups, and if theta corresponds to tree
 
 # 
 # ##### Change to data.frame

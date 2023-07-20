@@ -106,27 +106,77 @@ Bin2Dec <- function(x) {
   return(x)
 }
 
+## v1
+# reorderCV <- function(varname, vp) {
+#   order <- which(colSums(vp) != 0) # which levels contain the variable
+#   order <- order[length(order)] # the the last level with the variable
+#   for(i in order:1) {
+#     if (sum(vp[,i] != 0) > 0) {
+#       row_num <- which(vp[,i] != 0)[1]
+#       previous <- which(vp[row_num, 1:i-1] != 0)
+#       if (length(previous) > 0) {
+#         previous <- previous[length(previous)]
+#         previous_path <- vp[row_num, previous]
+#         if (previous_path == 1) {
+#           order <- c(order, previous)
+#         } else if (previous_path == 2) {
+#           order <- c(previous, order)
+#         }
+#       } else {
+#         order <- c(order, i)
+#       }
+#     }
+#   }
+#   order <- unique(order)
+#   return(order)
+# }
 
-reorderCV <- function(varname, vp) {
-  order <- which(colSums(vp) != 0)
-  order <- order[length(order)]
-  for(i in order:1) {
-    if (sum(vp[,i] != 0) > 0) {
-      row_num <- which(vp[,i] != 0)[1]
-      previous <- which(vp[row_num, 1:i-1] != 0)
-      if (length(previous) > 0) {
-        previous <- previous[length(previous)]
-        previous_path <- vp[row_num, previous]
+### v2
+reorderCV <- function(vp) {
+  layers <- which(colSums(vp) != 0) # which layers contain the variable
+  layers <- rev(layers)
+  order <- layers[1]
+  for(i in seq_along(layers)) {
+    current <- layers[i]
+    row_num <- which(vp[,layers[i]] != 0)[1] # get the row number of this variable in vp, 
+    # only take the 1st index, as in current SimulateTree, vars can only occur once in each layer, 
+    # so all entries in a layer has same ancestors in previous layers
+    previous <- layers[-c(1:i)]
+    previous <- previous[vp[row_num, previous] != 0]
+    if (length(previous) > 0) {
+      previous <- previous[1]
+      previous_path <- vp[row_num, previous]
+      if (!current %in% order) {
+        if (previous %in% order) {
+          if (previous_path == 1) {
+            order <- c(current, order)
+          } else if (previous_path == 2) {
+            order <- c(order, current)
+          }
+        } else {
+          order <- c(order, current)
+        }
+      } else {
         if (previous_path == 1) {
           order <- c(order, previous)
         } else if (previous_path == 2) {
           order <- c(previous, order)
         }
-      } else {
-        order <- c(order, i)
       }
-    }
+    } else if (i+1 <= length(layers)){
+        order <- c(order, layers[i+1])
+      }
+  #order <- unique(order)
   }
-  order <- unique(order)
   return(order)
 }
+
+#reorderCV(vp)
+
+# still has problems: consider cases where share same ancestor at root but all just have this one ancestor
+# sometimes the current will be missed
+# consider case where one has ancestor so order skipped the middle, and the middle one does not have ancestor,
+# then the middle would be missed
+
+## v3
+
