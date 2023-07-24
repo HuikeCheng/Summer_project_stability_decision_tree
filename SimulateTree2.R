@@ -162,6 +162,7 @@ SimulateTree <- function(height, n, pk, ev_xy, X=NULL, Y=NULL, Y_abs = 3, repeat
     empty_groups <- which(!(1:ngroups) %in% names(size))
     df$emptycol <- rep("", ngroups)
     df_plot$emptycol <- rep("", ngroups)
+    
     # pruning
     df <- df[-empty_groups,]
     df_plot <- df_plot[-empty_groups,]
@@ -208,21 +209,21 @@ SimulateTree <- function(height, n, pk, ev_xy, X=NULL, Y=NULL, Y_abs = 3, repeat
 }
 
 #####################
-library(data.tree)
-library(fake)
-source("Functions.R")
-
-height <- 5
-n <- 1000
-pk <- 500
-ev_xy <- 0.1
-
-start.time <- Sys.time()
-set.seed(4)
-simul <- SimulateTree(height, n, pk, ev_xy)
-end.time <- Sys.time()
-time.taken <- end.time - start.time
-time.taken
+# library(data.tree)
+# library(fake)
+# source("Functions.R")
+# 
+# height <- 5
+# n <- 1000
+# pk <- 500
+# ev_xy <- 0.1
+# 
+# start.time <- Sys.time()
+# set.seed(4)
+# simul <- SimulateTree(height, n, pk, 0.2)
+# end.time <- Sys.time()
+# time.taken <- end.time - start.time
+# time.taken
 # # 4:  s
 # # 5: 7.42 s
 # plot(simul$tree)

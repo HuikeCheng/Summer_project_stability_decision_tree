@@ -8,6 +8,8 @@ ev_xy <- as.numeric(args[4])
 numtrue <- as.numeric(args[5])
 nchunks <- as.numeric(args[6])
 
+# job script
+
 ######## create folder
 folder <- paste(paste0("Outputs/", "X1MultX2"), n, pk, ev_xy, numtrue, sep = "_")
 if (file.exists(folder) == FALSE) {

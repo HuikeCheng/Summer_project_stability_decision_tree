@@ -15,9 +15,10 @@ getMetrics <- function(selvars, theta) {
   if (is.nan(precision)) {precision <- 0}
   f1 <- 2*recall*precision/(recall+precision)
   if (is.nan(f1)) {f1 <- 0}
+  mcc <- (TP*TN-FP*FN)/sqrt((TP+FP)*(TP+FN)*(TN+FP)*(TN+FN))
   # output
-  metrics <- c(hd, f1, recall, precision, specificity)
-  names(metrics) <- c("HD", "F1", "Recall", "Precision", "Specificity")
+  metrics <- c(hd, f1, recall, precision, specificity, mcc)
+  names(metrics) <- c("HD", "F1", "Recall", "Precision", "Specificity", "MCC")
   return(metrics)
 }
 
@@ -132,44 +133,44 @@ Bin2Dec <- function(x) {
 # }
 
 ### v2
-reorderCV <- function(vp) {
-  layers <- which(colSums(vp) != 0) # which layers contain the variable
-  layers <- rev(layers)
-  order <- layers[1]
-  for(i in seq_along(layers)) {
-    current <- layers[i]
-    row_num <- which(vp[,layers[i]] != 0)[1] # get the row number of this variable in vp, 
-    # only take the 1st index, as in current SimulateTree, vars can only occur once in each layer, 
-    # so all entries in a layer has same ancestors in previous layers
-    previous <- layers[-c(1:i)]
-    previous <- previous[vp[row_num, previous] != 0]
-    if (length(previous) > 0) {
-      previous <- previous[1]
-      previous_path <- vp[row_num, previous]
-      if (!current %in% order) {
-        if (previous %in% order) {
-          if (previous_path == 1) {
-            order <- c(current, order)
-          } else if (previous_path == 2) {
-            order <- c(order, current)
-          }
-        } else {
-          order <- c(order, current)
-        }
-      } else {
-        if (previous_path == 1) {
-          order <- c(order, previous)
-        } else if (previous_path == 2) {
-          order <- c(previous, order)
-        }
-      }
-    } else if (i+1 <= length(layers)){
-        order <- c(order, layers[i+1])
-      }
-  #order <- unique(order)
-  }
-  return(order)
-}
+# reorderCV <- function(vp) {
+#   layers <- which(colSums(vp) != 0) # which layers contain the variable
+#   layers <- rev(layers)
+#   order <- layers[1]
+#   for(i in seq_along(layers)) {
+#     current <- layers[i]
+#     row_num <- which(vp[,layers[i]] != 0)[1] # get the row number of this variable in vp, 
+#     # only take the 1st index, as in current SimulateTree, vars can only occur once in each layer, 
+#     # so all entries in a layer has same ancestors in previous layers
+#     previous <- layers[-c(1:i)]
+#     previous <- previous[vp[row_num, previous] != 0]
+#     if (length(previous) > 0) {
+#       previous <- previous[1]
+#       previous_path <- vp[row_num, previous]
+#       if (!current %in% order) {
+#         if (previous %in% order) {
+#           if (previous_path == 1) {
+#             order <- c(current, order)
+#           } else if (previous_path == 2) {
+#             order <- c(order, current)
+#           }
+#         } else {
+#           order <- c(order, current)
+#         }
+#       } else {
+#         if (previous_path == 1) {
+#           order <- c(order, previous)
+#         } else if (previous_path == 2) {
+#           order <- c(previous, order)
+#         }
+#       }
+#     } else if (i+1 <= length(layers)){
+#         order <- c(order, layers[i+1])
+#       }
+#   #order <- unique(order)
+#   }
+#   return(order)
+# }
 
 #reorderCV(vp)
 
@@ -179,4 +180,40 @@ reorderCV <- function(vp) {
 # then the middle would be missed
 
 ## v3
+reorderCV <- function(vp) {
+  layers <- which(colSums(vp) != 0) # get layers that contain the variable
+  layers <- rev(layers) # start from last
+  order <- layers[1]
+  for(i in seq_along(layers)) {
+    current <- layers[i]
+    row_num <- which(vp[,layers[i]] != 0)[1]
+    previous <- layers[-c(1:i)]
+    previous <- previous[vp[row_num, previous] != 0]
+    if (length(previous) > 0) {
+      previous <- previous[1]
+      previous_path <- vp[row_num, previous]
+      if (!previous %in% order) {
+        if(!current %in% order) {
+          order <- c(order, current)
+        }
+        if (previous_path == 1) {
+          order <- c(order, previous)
+        } else {
+          order <- c(previous, order)
+        }
+      } else {
+        if (previous_path == 1) {
+          order <- c(current, order)
+        } else {
+          order <- c(order, current)
+        }
+      }
+    } else {
+      if(!current %in% order) {
+        order <- c(order, current)
+      }
+    }
+  }
+  return(order)
+}
 
