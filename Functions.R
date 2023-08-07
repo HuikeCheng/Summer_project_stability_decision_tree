@@ -2,12 +2,12 @@
 
 getMetrics <- function(selvars, theta) {
   # Hamming distance
-  hd <- sum(selvars != theta)
+  hd <- as.numeric(sum(selvars != theta))
   # confusion matrix
-  TP <- sum((selvars+theta) == 2)
-  TN <- sum((selvars+theta) == 0)
-  FP <- sum((selvars-theta) == 1)
-  FN <- sum((selvars-theta) == -1)
+  TP <- as.numeric(sum((selvars+theta) == 2))
+  TN <- as.numeric(sum((selvars+theta) == 0))
+  FP <- as.numeric(sum((selvars-theta) == 1))
+  FN <- as.numeric(sum((selvars-theta) == -1))
   # other metrics
   specificity <- TN/(TN+FP)
   recall <- TP/(TP+FN)
@@ -22,9 +22,9 @@ getMetrics <- function(selvars, theta) {
   return(metrics)
 }
 
-# vars   <- c(0,0,1,1,0,0)
-# myvars <- c(0,1,0,1,0,0)
-# getMetrics(vars, myvars)
+selvars <- c(0,0,1,1,0,0)
+theta <- c(0,1,0,1,0,0)
+getMetrics(selvars, theta)
 
 HugeAdjacency <- function(pk = 10, topology = "random", nu = 0.1, ...) {
   # Storing extra arguments
@@ -214,6 +214,7 @@ reorderCV <- function(vp) {
       }
     }
   }
+  order <- unique(order)
   return(order)
 }
 

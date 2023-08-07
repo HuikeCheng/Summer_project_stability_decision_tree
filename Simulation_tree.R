@@ -1,6 +1,6 @@
 ######## pass in arguments
 args=commandArgs(trailingOnly=TRUE)
-#args <- c("100", "4", "1000", "500", "0.1", "5")
+#args <- c("5", "5", "500", "1000", "0.01", "5")
 numrep <- as.numeric(args[1])
 height <- as.numeric(args[2])
 n <- as.numeric(args[3])
@@ -28,7 +28,7 @@ library(ggplot2)
 source("stab1.R")
 source("stab2.R")
 source("Functions.R")
-source("SimulateTree.R")
+source("SimulateTree2.R")
 
 ####################### Set up simulation study ################################
 Simulation_study <- function(seed, height, n, pk, ev_xy) {
@@ -40,27 +40,21 @@ Simulation_study <- function(seed, height, n, pk, ev_xy) {
   theta <- simul$theta
   
   # set up output
-  metrics <- vector("list", length = 5)
-  names(metrics) <- c("CART", "CART_ms0", "sCART1", "sCART2", "sLASSO")
+  metrics <- vector("list", length = 4)
+  sel <- vector("list", length = 4)
+  names(metrics) <- c("CART", "sCART1", "sCART2", "sLASSO")
+  names(sel) <- c("CART", "sCART1", "sCART2", "sLASSO")
   
   ######## run CART
   mydata <- data.frame(ydata = simul$ydata[, 1], simul$xdata)
-  cart <- rpart(ydata ~ ., mydata, method = "anova")
+  cart <- rpart(ydata ~ ., mydata, method = "anova", maxsurrogate = 0)
   
   myvars <- unique(rownames(cart$splits))
   selvars <- rep(0, pk)
-  names(selvars) <- names(theta)
+  names(selvars) <- colnames(simul$xdata)
   selvars[which(names(selvars) %in% myvars)] <- 1
   metrics$CART <- getMetrics(selvars = selvars, theta = theta)
-  
-  ######## run CART-maxsurrogate = 0
-  cartms0 <- rpart(ydata ~ ., mydata, method = "anova", maxsurrogate = 0)
-  
-  myvars <- unique(rownames(cartms0$splits))
-  selvars <- rep(0, pk)
-  names(selvars) <- names(theta)
-  selvars[which(names(selvars) %in% myvars)] <- 1
-  metrics$CART_ms0 <- getMetrics(selvars = selvars, theta = theta)
+  sel$CART <- selvars
   
   ######### run stab1
   scart1 <- sharp::VariableSelection(
@@ -71,6 +65,7 @@ Simulation_study <- function(seed, height, n, pk, ev_xy) {
   
   selvars <- SelectedVariables(scart1)
   metrics$sCART1 <- getMetrics(selvars = selvars, theta = theta)
+  sel$sCART1 <- selvars
   
   ####### run stab2
   Lambda <- cart$cptable[,1]
@@ -83,6 +78,7 @@ Simulation_study <- function(seed, height, n, pk, ev_xy) {
   
   selvars <- SelectedVariables(scart2)
   metrics$sCART2 <- getMetrics(selvars = selvars, theta = theta)
+  sel$sCART2 <- selvars
   
   ####### run Stability-lasso
   slasso <- sharp::VariableSelection(
@@ -92,16 +88,20 @@ Simulation_study <- function(seed, height, n, pk, ev_xy) {
   
   selvars <- SelectedVariables(slasso)
   metrics$sLASSO <- getMetrics(selvars = selvars, theta = theta)
+  sel$sLASSO <- selvars
   
   ####### Cleanup output
   metrics <- as.data.frame(list.rbind(metrics))
   metrics$model <- rownames(metrics)
   
+  sel <- as.data.frame(list.rbind(sel))
+  sel$model <- rownames(sel)
+  
   ####### output
-  return(metrics)
+  return(list(metrics = metrics, sel = sel))
 }
 
-#a <- Simulation_study(seed = 2, height = 4, n = 1000, pk = 500, ev_xy = 0.1)
+#a <- Simulation_study(seed = 5, height = 5, n = 500, pk = 1000, ev_xy = 0.01)
 
 ########### Parallelise
 no_cores <- nchunks
@@ -114,7 +114,7 @@ clusterEvalQ(cl, library(rlist))
 clusterEvalQ(cl, library(data.tree))
 clusterExport(cl, c("numrep", "height", "n", "pk", "ev_xy", "HugeAdjacency",
                     "reorderCV", "CART1", "CART2", "getMetrics", "Simulation_study",
-                    "SimulateTree"))
+                    "SimulateTree", "Bin2Dec"))
 
 out <- pblapply(1:numrep,
                 function(i) {Simulation_study(seed = i, height = height, 
@@ -124,45 +124,72 @@ out <- pblapply(1:numrep,
 stopCluster(cl)
 
 ########### cleanup output
-Metrics <- list.rbind(out)
+Metrics <- sapply(out, "[", 1)
+Metrics <- list.rbind(Metrics)
 Metrics$model <- factor(Metrics$model, levels = unique(Metrics$model))
+
+Sels <- sapply(out, "[", 2)
+Sels <- list.rbind(Sels)
 
 ########### save output
 saveRDS(Metrics, file = paste(folder,"Metrics.rds", sep = "/"))
+saveRDS(Sels, file = paste(folder,"Sels.rds", sep = "/"))
 
 ########### plots - Metrics
-title <- paste("Tree: ", "numrep=", numrep, ", height=", height, ", n=", n, ", pk=", pk, ", ev_xy=", ev_xy, 
-               sep = "")
+title <- paste("Tree: ", "height = ", height, ", n = ", n, ", pk = ", pk, ", ev_xy = ", ev_xy, sep = "")
 
 png(file = paste(folder,"Recall.png", sep = "/"))
-ggplot(Metrics, aes(x=Recall, y=forcats::fct_rev(model))) +
+ggplot(Metrics, aes(x=Recall, y=model)) +
   geom_boxplot() +
-  theme(legend.title = element_blank(),
-        axis.title.y = element_blank()) +
+  coord_flip() +
+  theme(axis.title.x = element_blank(),
+        plot.title = element_text(size = 11)) +
   ggtitle(title)
 dev.off()
 
 png(file = paste(folder,"Precision.png", sep = "/"))
-ggplot(Metrics, aes(x=Precision, y=forcats::fct_rev(model))) +
+ggplot(Metrics, aes(x=Precision, y=model)) +
   geom_boxplot() +
-  theme(legend.title = element_blank(),
-        axis.title.y = element_blank()) +
+  coord_flip() +
+  theme(axis.title.x = element_blank(),
+        plot.title = element_text(size = 11)) +
   ggtitle(title)
 dev.off()
 
 png(file = paste(folder,"F1.png", sep = "/"))
-ggplot(Metrics, aes(x=F1, y=forcats::fct_rev(model))) +
+ggplot(Metrics, aes(x=F1, y=model)) +
   geom_boxplot() +
-  theme(legend.title = element_blank(),
-        axis.title.y = element_blank()) +
+  coord_flip() +
   labs(x = "F1-score") +
+  theme(axis.title.x = element_blank(),
+        plot.title = element_text(size = 11)) +
   ggtitle(title)
 dev.off()
 
 png(file = paste(folder,"Specificity.png", sep = "/"))
-ggplot(Metrics, aes(x=Specificity, y=forcats::fct_rev(model))) +
+ggplot(Metrics, aes(x=Specificity, y=model)) +
   geom_boxplot() +
-  theme(legend.title = element_blank(),
-        axis.title.y = element_blank()) +
+  coord_flip() +
+  theme(axis.title.x = element_blank(),
+        plot.title = element_text(size = 11)) +
+  ggtitle(title)
+dev.off()
+
+png(file = paste(folder,"HD.png", sep = "/"))
+ggplot(Metrics, aes(x=HD, y=model)) +
+  geom_boxplot() +
+  coord_flip() +
+  labs(x = "Hamming distance") +
+  theme(axis.title.x = element_blank(),
+        plot.title = element_text(size = 11)) +
+  ggtitle(title)
+dev.off()
+
+png(file = paste(folder,"MCC.png", sep = "/"))
+ggplot(Metrics, aes(x=MCC, y=model)) +
+  geom_boxplot() +
+  coord_flip() +
+  theme(axis.title.x = element_blank(),
+        plot.title = element_text(size = 11)) +
   ggtitle(title)
 dev.off()

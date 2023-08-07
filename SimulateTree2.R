@@ -200,8 +200,7 @@ SimulateTree <- function(height, n, pk, ev_xy, X=NULL, Y=NULL, Y_abs = 3, repeat
   tree <- as.Node(df)
   var_final <- as.numeric(unique(tree$Get('name', filterFun = isNotLeaf)))
   theta <- rep(0, pk)
-  theta <- as.matrix(theta)
-  rownames(theta) <- colnames(xdata)
+  names(theta) <- colnames(xdata)
   theta[var_final] <- 1
   
   # output
