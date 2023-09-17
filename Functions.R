@@ -22,9 +22,9 @@ getMetrics <- function(selvars, theta) {
   return(metrics)
 }
 
-selvars <- c(0,0,1,1,0,0)
-theta <- c(0,1,0,1,0,0)
-getMetrics(selvars, theta)
+# selvars <- c(0,0,1,1,0,0)
+# theta <- c(0,1,0,1,0,0)
+# getMetrics(selvars, theta)
 
 HugeAdjacency <- function(pk = 10, topology = "random", nu = 0.1, ...) {
   # Storing extra arguments
@@ -213,6 +213,10 @@ reorderCV <- function(vp) {
         order <- c(order, current)
       }
     }
+  }
+  order <- unique(order)
+  return(order)
+}
   }
   order <- unique(order)
   return(order)
