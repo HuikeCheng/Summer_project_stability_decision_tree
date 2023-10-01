@@ -217,4 +217,8 @@ reorderCV <- function(vp) {
   order <- unique(order)
   return(order)
 }
+  }
+  order <- unique(order)
+  return(order)
+}
 
