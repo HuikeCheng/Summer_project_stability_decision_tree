@@ -1,15 +1,16 @@
 ######## pass in arguments
 args=commandArgs(trailingOnly=TRUE)
-#args <- c("5", "5", "500", "100", "0.1", "5")
+#args <- c("10", "Linear", "100", "10", "0.2", "0.2", "5")
 numrep <- as.numeric(args[1])
-height <- as.numeric(args[2])
+association <- as.character(args[2])
 n <- as.numeric(args[3])
 pk <- as.numeric(args[4])
 ev_xy <- as.numeric(args[5])
-nchunks <- as.numeric(args[6])
+nu_xy <- as.numeric(args[6])
+nchunks <- as.numeric(args[7])
 
 ######## create folder
-folder <- paste(paste0("Outputs/Tree"), height, n, pk, ev_xy, sep = "_")
+folder <- paste(paste0("Outputs/", "Linear"), n, pk, ev_xy, nu_xy, sep = "_")
 if (file.exists(folder) == FALSE) {
   dir.create(folder)
 }
@@ -26,25 +27,51 @@ library(parallel)
 library(ggplot2)
 library(xgboost)
 library(rfvimptest)
-library(data.tree)
 source("Functions/Functions.R")
 source("Functions/cart1.R")
 source("Functions/cart2.R")
-source("Functions/SimulateTree.R")
+source("Functions/SimulateX.R")
 
 #####################
 time1 <- Sys.time()
 
 #####################
-Simulation_study <- function(seed, height, n, pk, ev_xy) {
-  # set seed
+Simulation_study <- function(seed, n, pk, association, ev_xy, nu_xy, multivariate_normal = TRUE) {
+  ##### set seed
   set.seed(seed)
-  # generate data
-  simul <- SimulateTree(height = height, n = n, pk = pk, ev_xy = ev_xy)
-  ydata <- simul$ydata
-  xdata <- simul$xdata
+  ##### simulate data
+  # simulate xdata
+  if (multivariate_normal == TRUE) {
+    xsimul <- SimulateGraphical(
+      n = n, pk = pk, theta = NULL,
+      implementation = HugeAdjacency, topology = "random",
+      nu_within = 0, nu_between = 0, nu_mat = NULL,
+      v_within = 0, v_between = 0,
+      v_sign = c(-1, 1), continuous = TRUE,
+      pd_strategy = "diagonally_dominant", ev_xx = NULL, scale_ev = TRUE,
+      u_list = c(1e-10, 1), tol = .Machine$double.eps^0.25,
+      scale = TRUE, output_matrices = FALSE
+    )
+    xdata <- xsimul$data
+    print("mn")
+  } else {
+    xdata <- matrix(rnorm(n*pk),n,pk)
+    colnames(xdata) <- paste0("var", 1:pk)
+  }
+  # simulate ydata
+  numvar <- nu_xy*pk
+  beta <- rep(1, numvar)
+  mu <- xdata[,51:(50+numvar)]%*%beta
+  ypred <- mu
+  
+  sigma <- sqrt((1 - ev_xy) / ev_xy * stats::var(ypred))
+  ydata <- stats::rnorm(n = n, mean = ypred, sd = sigma)
+  ydata <- as.matrix(ydata)
+  
   # theta
-  theta <- simul$theta
+  theta <- rep(0, pk)
+  names(theta) <- colnames(xdata)
+  theta[51:(50+numvar)] <- 1
   
   # set up output
   metrics <- vector("list", length = 10)
@@ -149,7 +176,7 @@ Simulation_study <- function(seed, height, n, pk, ev_xy) {
   
   ####### run RF_VT
   # rf_vt_sprt <- rfvimptest_new(data = mydata, yname = "ydata", test = "general", 
-  #                              type = "SPRT")
+  #                          type = "SPRT")
   # myvars <- names(rf_vt_sprt$testres)[which(rf_vt_sprt$testres == "accept H1")]
   # selvars <- rep(0, pk)
   # names(selvars) <- colnames(xdata)
@@ -158,7 +185,7 @@ Simulation_study <- function(seed, height, n, pk, ev_xy) {
   # sel$RF_VT_SPRT <- selvars
   # 
   # rf_vt_sapt <- rfvimptest_new(data = mydata, yname = "ydata", test = "general", 
-  #                              type = "SAPT")
+  #                          type = "SAPT")
   # myvars <- names(rf_vt_sapt$testres)[which(rf_vt_sapt$testres == "accept H1")]
   # selvars <- rep(0, pk)
   # names(selvars) <- colnames(xdata)
@@ -184,7 +211,7 @@ Simulation_study <- function(seed, height, n, pk, ev_xy) {
   return(list(metrics = metrics, sel = sel, selprops = selprops, selthr = selthr))
 }
 
-#a <- Simulation_study(seed = 5, height = 5, n = 1000, pk = 500, ev_xy = 0.1)
+#a <- Simulation_study(seed = 1, n = 100, pk = 10, association = "Linear", ev_xy = 0.2, nu_xy = 0.2)
 
 #########################
 no_cores <- nchunks
@@ -198,14 +225,13 @@ clusterEvalQ(cl, library(randomForest))
 clusterEvalQ(cl, library(xgboost))
 clusterEvalQ(cl, library(Boruta))
 clusterEvalQ(cl, library(rfvimptest))
-clusterEvalQ(cl, library(data.tree))
-clusterExport(cl, c("numrep", "height", "n", "pk", "ev_xy", "HugeAdjacency",
-                    "reorderCV", "CART1", "CART2", "getMetrics", "Simulation_study",
-                    "SimulateTree", "Bin2Dec", "GenerateTree", "PruneTree", "getImpXgboost_new"))
+clusterExport(cl, c("n", "pk", "association","ev_xy", "nu_xy", "numrep",
+                    "CART1", "CART2", "getMetrics", "Simulation_study",
+                    "HugeAdjacency","transformX", "getImpXgboost_new"))
 
 out <- parLapply(1:numrep,
-                 function(i) {Simulation_study(seed = i, height = height, 
-                                               n = n, pk = pk, ev_xy = ev_xy)},
+                 function(i) {Simulation_study(seed = i, n = n, pk = pk, association = association,
+                                               ev_xy = ev_xy, nu_xy = nu_xy)},
                  cl = cl)
 
 stopCluster(cl)
@@ -226,8 +252,7 @@ Selthrs <- list.rbind(Selthrs)
 
 theta <- rep(0, pk)
 names(theta) <- paste0("var", 1:pk)
-numvar <- sum(2^c(0:(height-2)))
-theta[1:numvar] <- 1
+theta[51:(50+nu_xy*pk)] <- 1
 
 ########### save output
 saveRDS(Metrics, file = paste(folder,"Metrics.rds", sep = "/"))

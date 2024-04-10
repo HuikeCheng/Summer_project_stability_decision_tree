@@ -1,4 +1,4 @@
-GenerateTree <- function(height, ngroups, nlayer, n, pk, ev_xy, Y_abs = 3, repeated_pred = TRUE, multivariate_normal = TRUE) {
+GenerateTree <- function(height, ngroups, nlayer, n, pk, ev_xy, Y_abs = 3, repeated_pred = FALSE, multivariate_normal = TRUE) {
   ##### Prepare structure of tree as dataframe
   df <- data.frame(matrix(NA, ngroups, height))
   colnames(df) <- c(paste0("Level", 1:nlayer), "Leaf")
@@ -187,7 +187,7 @@ PruneTree <- function(height, ngroups, nlayer, size, df, df_plot) {
 }
 
 
-SimulateTree <- function(height, n, pk, ev_xy, Y_abs = 3, repeated_pred = TRUE, multivariate_normal = TRUE) {
+SimulateTree <- function(height, n, pk, ev_xy, Y_abs = 3, repeated_pred = FALSE, multivariate_normal = TRUE) {
   nlayer <- height - 1
   ngroups <- 2^(nlayer)
   
