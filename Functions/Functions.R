@@ -12,9 +12,11 @@ getMetrics <- function(selvars, theta) {
   specificity <- TN/(TN+FP)
   recall <- TP/(TP+FN)
   precision <- TP/(TP+FP)
-  if (is.nan(precision)) {precision <- 0}
-  f1 <- 2*recall*precision/(recall+precision)
-  if (is.nan(f1)) {f1 <- 0}
+  if (is.nan(precision)) {
+    f1 <- NaN
+  } else {
+    f1 <- 2*recall*precision/(recall+precision)
+  }
   mcc <- (TP*TN-FP*FN)/sqrt((TP+FP)*(TP+FN)*(TN+FP)*(TN+FN))
   # output
   metrics <- c(hd, f1, recall, precision, specificity, mcc)

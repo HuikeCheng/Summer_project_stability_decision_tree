@@ -1,3 +1,49 @@
+################ Functions used inside SimulateTree ###########################
+# Binary to Decimal
+Bin2Dec <- function(x) {
+  x <- sum(2^(which(rev(x) == 1) - 1))
+  return(x)
+}
+# Reorder cutoff value
+reorderCV <- function(vp) {
+  layers <- which(colSums(vp) != 0) # get layers that contain the variable
+  layers <- rev(layers) # start from last
+  order <- layers[1]
+  for(i in seq_along(layers)) {
+    current <- layers[i]
+    row_num <- which(vp[,layers[i]] != 0)[1]
+    previous <- layers[-c(1:i)]
+    previous <- previous[vp[row_num, previous] != 0]
+    if (length(previous) > 0) {
+      previous <- previous[1]
+      previous_path <- vp[row_num, previous]
+      if (!previous %in% order) {
+        if(!current %in% order) {
+          order <- c(order, current)
+        }
+        if (previous_path == 1) {
+          order <- c(order, previous)
+        } else {
+          order <- c(previous, order)
+        }
+      } else {
+        if (previous_path == 1) {
+          order <- c(current, order)
+        } else {
+          order <- c(order, current)
+        }
+      }
+    } else {
+      if(!current %in% order) {
+        order <- c(order, current)
+      }
+    }
+  }
+  order <- unique(order)
+  return(order)
+}
+
+# GenerateTree
 GenerateTree <- function(height, ngroups, nlayer, n, pk, ev_xy, Y_abs = 3, repeated_pred = FALSE, multivariate_normal = TRUE) {
   ##### Prepare structure of tree as dataframe
   df <- data.frame(matrix(NA, ngroups, height))
@@ -151,6 +197,7 @@ GenerateTree <- function(height, ngroups, nlayer, n, pk, ev_xy, Y_abs = 3, repea
   return(list(df=df, df_plot=df_plot, xdata = xdata, ydata = ydata, groups = groups))
 }
 
+# PruneTree
 PruneTree <- function(height, ngroups, nlayer, size, df, df_plot) {
   # empty groups
   empty_groups <- which(!(1:ngroups) %in% names(size))
@@ -186,7 +233,7 @@ PruneTree <- function(height, ngroups, nlayer, size, df, df_plot) {
   return(list(df=df, df_plot=df_plot))
 }
 
-
+############################### SimulateTree #############################
 SimulateTree <- function(height, n, pk, ev_xy, Y_abs = 3, repeated_pred = FALSE, multivariate_normal = TRUE) {
   nlayer <- height - 1
   ngroups <- 2^(nlayer)
