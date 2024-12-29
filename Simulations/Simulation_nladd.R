@@ -1,6 +1,6 @@
 ######## pass in arguments
 args=commandArgs(trailingOnly=TRUE)
-#args <- c("10", "Exponential", "500", "1000", "0.2", "0.2", "0.2","5")
+#args <- c("10", "Exponential", "50", "100", "0.2", "0.2", "0.2","5")
 numrep <- as.numeric(args[1])
 association <- as.character(args[2])
 n <- as.numeric(args[3])
@@ -11,13 +11,14 @@ nu_nl <- as.numeric(args[7])
 nchunks <- as.numeric(args[8])
 
 ######## create folder
-folder <- paste(paste0("Outputs/", "Additive"), association, n, pk, ev_xy, nu_xy, nu_nl, sep = "_")
+folder <- paste(paste0("OutputsV3/", "Additive"), association, n, pk, ev_xy, nu_xy, nu_nl, sep = "_")
 if (file.exists(folder) == FALSE) {
   dir.create(folder)
 }
 print(folder)
 #####################
 library(rpart)
+library(partykit)
 library(sharp)
 library(fake)
 library(rlist)
@@ -31,6 +32,7 @@ library(rfvimptest)
 source("Functions/Functions.R")
 source("Functions/cart1.R")
 source("Functions/cart2.R")
+source("Functions/cart3.R")
 source("Functions/SimulateX.R")
 
 #####################
@@ -66,14 +68,14 @@ Simulation_study <- function(seed, n, pk, association, ev_xy, nu_xy, nu_nl, mult
   
   if (nu_nl == 1) {
     beta <- rep(1, numvar)
-    mu <- as.matrix(xdata[,51:(50+numvar)])%*%beta
+    mu <- as.matrix(xdata[,1:numvar])%*%beta
     ypred <- transformX(mu, association)
   } else {
     beta_l <- rep(1, lvar)
-    mu_l <- as.matrix(xdata[,51:(50+lvar)])%*%beta_l
+    mu_l <- as.matrix(xdata[,1:lvar])%*%beta_l
     
     beta_nl <- rep(1, nlvar)
-    mu_nl <- as.matrix(xdata[,(51+lvar):(50+numvar)])%*%beta_nl
+    mu_nl <- as.matrix(xdata[,(1+lvar):numvar])%*%beta_nl
     
     ypred <- mu_l + transformX(mu_nl, association)
   }
@@ -85,22 +87,20 @@ Simulation_study <- function(seed, n, pk, association, ev_xy, nu_xy, nu_nl, mult
   # theta
   theta <- rep(0, pk)
   names(theta) <- colnames(xdata)
-  theta[51:(50+numvar)] <- 1
+  theta[1:numvar] <- 1
   
   # set up output
-  metrics <- vector("list", length = 10)
-  sel <- vector("list", length = 10)
-  names(metrics) <- c("CART", "sCART1", "sCART2", "sLASSO", 
-                      "RF_B_CT", "RF_B_C", "XGB_B_CT", "XGB_B_C", 
-                      "RF_VT_SRPT", "RF_VT_SAPT")
-  names(sel) <- c("CART", "sCART1", "sCART2", "sLASSO", 
-                  "RF_B_CT", "RF_B_C", "XGB_B_CT", "XGB_B_C", 
-                  "RF_VT_SRPT", "RF_VT_SAPT")
+  metrics <- vector("list", length = 11)
+  sel <- vector("list", length = 11)
+  names(metrics) <- c("CART", "sCART1", "sCART2", "sCART3", "sLASSO", "ciTree", "RF",
+                      "RF_B_CT", "RF_B_C", "XGB_B_CT", "XGB_B_C")
+  names(sel) <- c("CART", "sCART1", "sCART2", "sCART3", "sLASSO", "ciTree", "RF",
+                  "RF_B_CT", "RF_B_C", "XGB_B_CT", "XGB_B_C")
   
-  selprops <- vector("list", length = 3)
-  selthr <- vector("list", length = 3)
-  names(selprops) <- c("sCART1", "sCART2", "sLASSO")
-  names(selthr) <- c("sCART1", "sCART2", "sLASSO")
+  selprops <- vector("list", length = 4)
+  selthr <- vector("list", length = 4)
+  names(selprops) <- c("sCART1", "sCART2", "sCART3", "sLASSO")
+  names(selthr) <- c("sCART1", "sCART2", "sCART3", "sLASSO")
   
   ######## run CART
   mydata <- data.frame(ydata = ydata[, 1], xdata)
@@ -118,9 +118,11 @@ Simulation_study <- function(seed, n, pk, association, ev_xy, nu_xy, nu_nl, mult
     xdata = xdata, ydata = ydata,
     implementation = CART1,
     family = "gaussian",
+    Lambda = cbind(seq(1, min(nrow(xdata) / 2, 100))),
     maxsurrogate = 0)
   
   selvars <- SelectedVariables(scart1)
+  names(selvars) <- names(theta)
   metrics$sCART1 <- getMetrics(selvars = selvars, theta = theta)
   sel$sCART1 <- selvars
   
@@ -137,11 +139,26 @@ Simulation_study <- function(seed, n, pk, association, ev_xy, nu_xy, nu_nl, mult
     maxsurrogate = 0)
   
   selvars <- SelectedVariables(scart2)
+  names(selvars) <- names(theta)
   metrics$sCART2 <- getMetrics(selvars = selvars, theta = theta)
   sel$sCART2 <- selvars
   
   selprops$sCART2 <- scart2$selprop[ArgmaxId(scart2)[1],]
   selthr$sCART2 <- Argmax(scart2)[2]
+  
+  ####### run scart3
+  scart3 <- sharp::VariableSelection(
+    xdata = xdata, ydata = ydata,
+    Lambda = cbind(seq(0, 0.2, 0.005)),
+    implementation = CART3)
+  
+  selvars <- SelectedVariables(scart3)
+  names(selvars) <- names(theta)
+  metrics$sCART3 <- getMetrics(selvars = selvars, theta = theta)
+  sel$sCART3 <- selvars
+  
+  selprops$sCART3 <- scart3$selprop[ArgmaxId(scart3)[1],]
+  selthr$sCART3 <- Argmax(scart3)[2]
   
   ####### run Stability-lasso
   slasso <- sharp::VariableSelection(
@@ -155,6 +172,24 @@ Simulation_study <- function(seed, n, pk, association, ev_xy, nu_xy, nu_nl, mult
   
   selprops$sLASSO <- slasso$selprop[ArgmaxId(slasso)[1],]
   selthr$sLASSO <- Argmax(slasso)[2]
+  
+  ####### run ctree
+  citree <- partykit::ctree(ydata~., data = mydata)
+  pvals <- nodeapply(citree, ids = nodeids(citree), FUN = function(n) info_node(n)$p.value)
+  if (list(NULL) %in% pvals) {
+    pvals <- Filter(Negate(is.null), pvals)
+  }
+  
+  if (any(pvals < 0.05)) {
+    selvars <- pvals[which(pvals < 0.05)]
+    myvars <- sapply(selvars, function(x){names(x[1])})
+  }
+  
+  selvars <- rep(0, pk)
+  names(selvars) <- colnames(xdata)
+  selvars[which(names(selvars) %in% myvars)] <- 1
+  metrics$ciTree <- getMetrics(selvars = selvars, theta = theta)
+  sel$ciTree <- selvars
   
   ####### run RF_B
   rf_b <- Boruta(ydata~.,data=mydata,doTrace=2, getImp = getImpLegacyRfZ)
@@ -188,25 +223,6 @@ Simulation_study <- function(seed, n, pk, association, ev_xy, nu_xy, nu_nl, mult
   metrics$XGB_B_C <- getMetrics(selvars = selvars, theta = theta)
   sel$XGB_B_C <- selvars
   
-  ####### run RF_VT
-  # rf_vt_sprt <- rfvimptest_new(data = mydata, yname = "ydata", test = "general", 
-  #                              type = "SPRT")
-  # myvars <- names(rf_vt_sprt$testres)[which(rf_vt_sprt$testres == "accept H1")]
-  # selvars <- rep(0, pk)
-  # names(selvars) <- colnames(xdata)
-  # selvars[which(names(selvars) %in% myvars)] <- 1
-  # metrics$RF_VT_SPRT <- getMetrics(selvars = selvars, theta = theta)
-  # sel$RF_VT_SPRT <- selvars
-  # 
-  # rf_vt_sapt <- rfvimptest_new(data = mydata, yname = "ydata", test = "general", 
-  #                              type = "SAPT")
-  # myvars <- names(rf_vt_sapt$testres)[which(rf_vt_sapt$testres == "accept H1")]
-  # selvars <- rep(0, pk)
-  # names(selvars) <- colnames(xdata)
-  # selvars[which(names(selvars) %in% myvars)] <- 1
-  # metrics$RF_VT_SAPT <- getMetrics(selvars = selvars, theta = theta)
-  # sel$RF_VT_SAPT <- selvars
-  
   ####### Cleanup output
   metrics <- as.data.frame(list.rbind(metrics))
   metrics$model <- rownames(metrics)
@@ -232,6 +248,7 @@ no_cores <- nchunks
 cl <- makeCluster(no_cores)
 
 clusterEvalQ(cl, library(rpart))
+clusterEvalQ(cl, library(partykit))
 clusterEvalQ(cl, library(sharp))
 clusterEvalQ(cl, library(fake))
 clusterEvalQ(cl, library(rlist))
@@ -240,7 +257,7 @@ clusterEvalQ(cl, library(xgboost))
 clusterEvalQ(cl, library(Boruta))
 clusterEvalQ(cl, library(rfvimptest))
 clusterExport(cl, c("n", "pk", "association","ev_xy", "nu_xy", "nu_nl", "numrep",
-                    "CART1", "CART2", "getMetrics", "Simulation_study",
+                    "CART1", "CART2", "CART3", "getMetrics", "Simulation_study",
                     "HugeAdjacency","transformX", "getImpXgboost_new"))
 
 out <- parLapply(1:numrep,
@@ -266,7 +283,7 @@ Selthrs <- list.rbind(Selthrs)
 
 theta <- rep(0, pk)
 names(theta) <- paste0("var", 1:pk)
-theta[51:(50+nu_xy*pk)] <- 1
+theta[1:(nu_xy*pk)] <- 1
 
 ########### save output
 saveRDS(Metrics, file = paste(folder,"Metrics.rds", sep = "/"))
